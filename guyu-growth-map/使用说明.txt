@@ -1,0 +1,39 @@
+谷雨「知肤生长图谱」手机网页原型
+
+在手机上使用
+1. 将整个 guyu-growth-map 文件夹（含 models、vendor、icons）上传到支持 HTTPS 的静态网站。
+2. 用手机浏览器打开网站，授予前置摄像头权限。
+3. 打开「AR 知肤镜」，把脸和食指放进画面，让食指在脸颊、额头等区域短暂停留，即可触发该位置的机制示意动画。
+4. 可通过浏览器菜单将网页添加到手机主屏幕，作为网页应用使用。
+
+使用 GitHub Desktop 和 GitHub Pages 发布（推荐）
+1. 在 GitHub Desktop 选中准备发布的仓库，点击 Show in Explorer（在资源管理器中显示）。
+2. 打开本文件夹 guyu-growth-map，复制里面的全部内容，粘贴到刚打开的仓库文件夹根目录。不要复制 ZIP，也不要再套一层 guyu-growth-map 文件夹。仓库根目录应直接看到 index.html、.nojekyll、models、vendor、icons 等。
+3. 回到 GitHub Desktop，在左下 Summary 输入“添加谷雨网页原型”，点击 Commit to main，再点击顶部的 Push origin。
+4. 到 GitHub 网站刷新仓库，确认首页出现 index.html。进入 Settings → Pages → Build and deployment，将 Source 设为 Deploy from a branch，Branch 设为 main，Folder 设为 /(root)，再点 Save。
+5. 等待页面显示 Visit site。项目网址通常是 https://你的用户名.github.io/仓库名/ 。用手机 Safari 或 Chrome 打开并允许摄像头权限。
+6. 该原型含大型识别模型，浏览器直接批量上传可能失败。Codespaces 可用于在线修改代码；固定公开网址由 GitHub Pages 提供。
+
+直接在电脑上体验
+- 双击 index.html 可浏览资料与记录功能，但 file:// 页面通常不能使用摄像头或加载识别模型。
+- 在该文件夹运行 python -m http.server 8000，再打开 http://localhost:8000/ ，可测试摄像头。
+
+原型实现
+- 前置摄像头画面与官方 MediaPipe 面部、手部关键点模型；模型文件随网页打包。
+- 食指指尖进入面部画面区域并停留后，在相应位置触发动态光圈与植萃粒子示意。
+- 产品资料卡、二维码入口、成分解释、晨晚使用记录、14 天生长图谱、28 天时间线。
+- 相机画面和关键点仅在浏览器中处理，不保存、不上传。使用记录仅存当前浏览器的 localStorage。
+
+准确性边界
+- 单个摄像头只能判断手指与脸在画面中接近，不能确认物理接触、产品是否已经涂抹或皮肤内部状态。
+- AR 动画用于解释谷雨产品的配方与作用思路，不是真实皮肤检测或功效测量。
+- 植物生长只表示护理记录积累，不表示功效积累百分比。
+- 当前的肤感回顾是规则演示，不是 AI 诊断。
+- 这是一款独立制作的概念原型，不是谷雨官方产品。
+
+产品资料
+谷雨官网：光感美白修护焕亮精华霜（美白奶罐 Pro）
+https://guyu.com.cn/item/8.html
+
+第三方组件
+MediaPipe Tasks Vision 1.1.1 与官方模型；见 vendor/THIRD_PARTY_NOTICES.txt。

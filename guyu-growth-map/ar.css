@@ -1,0 +1,15 @@
+.ar-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+.camera-stage.ar-ready .face-guide{display:none}
+.camera-stage.camera-on .camera-caption{display:none}
+.ar-event{position:absolute;left:14px;right:14px;bottom:15px;z-index:5;padding:12px 14px;border:1px solid rgba(255,255,255,.55);border-radius:12px;background:rgba(31,69,42,.78);color:white;box-shadow:0 12px 30px rgba(0,0,0,.16);backdrop-filter:blur(10px);pointer-events:none;transform:translateY(0);opacity:1;transition:opacity .35s,transform .35s}
+.ar-event[hidden]{display:none}.ar-event.fade{opacity:0;transform:translateY(8px)}
+.ar-event strong{display:block;font-family:serif;font-weight:500;font-size:16px;letter-spacing:.5px;margin-bottom:3px}.ar-event small{display:block;font-size:10px;line-height:1.6;color:#e1efdf}
+.ar-bloom{position:absolute;width:1px;height:1px;z-index:4;pointer-events:none;transform:translate(-50%,-50%)}
+.ar-bloom::before,.ar-bloom::after{content:"";position:absolute;left:0;top:0;width:110px;height:110px;border-radius:50%;border:2px solid rgba(255,244,188,.85);box-shadow:0 0 28px rgba(223,255,190,.5),inset 0 0 22px rgba(236,255,201,.33);transform:translate(-50%,-50%) scale(.08);animation:ar-ripple 1.8s ease-out forwards}
+.ar-bloom::after{animation-delay:.32s;border-color:rgba(209,255,204,.8)}
+.ar-bloom span{position:absolute;width:8px;height:15px;background:linear-gradient(140deg,#f8e6ad,#b7e6a7);border-radius:100% 0 100% 0;box-shadow:0 0 14px #efffca;animation:ar-leaf 1.6s ease-out forwards;--x:55px;--y:-48px}
+.ar-bloom span:nth-child(2){--x:-67px;--y:-32px;animation-delay:.12s}.ar-bloom span:nth-child(3){--x:15px;--y:-78px;animation-delay:.08s}.ar-bloom span:nth-child(4){--x:70px;--y:20px;animation-delay:.22s}.ar-bloom span:nth-child(5){--x:-30px;--y:58px;animation-delay:.18s}
+@keyframes ar-ripple{0%{opacity:1;transform:translate(-50%,-50%) scale(.08)}65%{opacity:.75}100%{opacity:0;transform:translate(-50%,-50%) scale(1.4)}}
+@keyframes ar-leaf{0%{opacity:0;transform:translate(0,0) scale(.3) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1.1) rotate(90deg)}}
+@media(max-width:620px){.camera-stage{height:min(62vh,500px);min-height:360px}.camera-top{position:relative;z-index:1}.camera-toggle{min-width:84px}.ar-event strong{font-size:15px}}
+@media(prefers-reduced-motion:reduce){.ar-bloom::before,.ar-bloom::after,.ar-bloom span{animation-duration:.01ms}.ar-event{transition:none}}

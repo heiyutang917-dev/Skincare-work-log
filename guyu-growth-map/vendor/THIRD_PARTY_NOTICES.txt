@@ -1,0 +1,16 @@
+MediaPipe Tasks Vision 1.1.1
+Copyright Google LLC and the MediaPipe Authors.
+Licensed under the Apache License, Version 2.0. See LICENSE-2.0.txt.
+Package: https://www.npmjs.com/package/@mediapipe/tasks-vision
+
+Face Landmarker model:
+https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task
+SHA-256: 64184E229B263107BC2B804C6625DB1341FF2BB731874B0BCC2FE6544E0BC9FF
+Hand Landmarker model:
+https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task
+SHA-256: FBC2A30080C3C557093B5DDFC334698132EB341044CCEE322CCF8BCF3607CDE1
+Model documentation and license details:
+https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker
+https://developers.google.com/edge/mediapipe/solutions/vision/hand_landmarker
+
+This concept prototype is independently made and is not an official Guyu product.
