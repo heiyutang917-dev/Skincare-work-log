@@ -2,6 +2,8 @@
   'use strict';
 
   const STORE = 'guyu-growth-map-v1';
+  const CATALOG = window.GUYU_CATALOG || { checkedAt: '未加载', directory: '', products: [] };
+  const products = CATALOG.products;
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, '0');
   const dateKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -20,6 +22,7 @@
   let activeTab = 'today';
   let previousFocus = null;
   let draftRatings = {};
+  let catalogFamily = 'all';
   const stage = $('camera-stage');
   const overlay = document.createElement('canvas');
   overlay.className = 'ar-overlay'; overlay.setAttribute('aria-hidden', 'true'); stage.append(overlay);
@@ -38,11 +41,115 @@
   } catch (_) { /* The prototype still works if browser storage is blocked. */ }
 
   function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {} }
+  function productById(id) { return products.find((product) => product.id === id); }
+  function activeProduct() { return productById(state.selectedProductId) || productById('cream-pro') || products[0]; }
+  function makeChip(value) { const chip = document.createElement('span'); chip.textContent = value; return chip; }
   function record(key = today()) { return state.records[key] || {}; }
   function updateToday(change) {
     const key = today();
     state.records[key] = { ...record(key), ...change };
     save(); render();
+  }
+
+  function selectProduct(id, goToToday = true) {
+    if (!productById(id)) return;
+    state.selectedProductId = id;
+    save(); render(); renderStep(); renderCatalog();
+    if (goToToday) showTab('today', 'today-focus');
+  }
+
+  function renderTodayProduct() {
+    const product = activeProduct(); if (!product) return;
+    $('today-product-family').textContent = product.family === '双效护理' ? '谷雨双效护理产品' : `谷雨${product.family}系列`;
+    $('today-product-short').textContent = product.short;
+    $('today-product-name').textContent = product.name;
+    $('today-bottle-name').textContent = product.short;
+    const visual = document.querySelector('.product-bottle');
+    let photo = visual.querySelector('.today-product-photo');
+    if (!photo) {
+      photo = document.createElement('img');
+      photo.id = 'today-product-image';
+      photo.className = 'today-product-photo';
+      photo.onload = () => visual.classList.add('has-photo');
+      photo.onerror = () => visual.classList.remove('has-photo');
+      visual.append(photo);
+    }
+    photo.src = product.image;
+    photo.alt = `谷雨${product.short}官方产品图`;
+    $('today-product-tags').replaceChildren(...[...product.ingredients.slice(0, 2), ...product.effects.slice(0, 1)].map(makeChip));
+    $('today-product-source').href = product.source;
+    $('today-product-source').textContent = `查看${product.sourceType} ↗`;
+    $('today-product-use').textContent = `${product.use} 首次使用可先局部测试；如有不适，请停止使用。`;
+    $('today-use-source').href = product.source;
+    for (const part of ['am', 'pm']) {
+      $(`log-${part}`).querySelector('.ritual-main small').textContent = `当前选择：${product.short}`;
+    }
+  }
+
+  function renderLab() {
+    const product = activeProduct(); if (!product) return;
+    for (const [id, label] of [['lab-origin', '所属系列'], ['lab-active', '公开核心成分'], ['lab-formula', '产品特点'], ['lab-goal', '官网功效']]) {
+      $(id).previousElementSibling.textContent = label;
+    }
+    $('lab-product-name').textContent = `当前产品：${product.short}`;
+    $('lab-origin').textContent = product.family;
+    $('lab-active').textContent = product.ingredients.slice(0, 2).join(' · ');
+    $('lab-formula').textContent = product.feature;
+    $('lab-goal').textContent = product.effects.slice(0, 2).join(' + ');
+    $('lab-evidence-title').textContent = `${product.short}为什么这样设计？`;
+    $('lab-evidence-copy').textContent = `${product.mechanism} ${product.evidence}`;
+    $('lab-evidence-tags').replaceChildren(...[product.sourceType, ...product.effects.slice(0, 2), '实际效果因人而异'].map(makeChip));
+    $('lab-evidence-source').href = product.source;
+    $('lab-evidence-source').textContent = `阅读${product.sourceType} ↗`;
+  }
+
+  function renderCatalog() {
+    $('catalog-total').textContent = String(products.length);
+    $('catalog-date').textContent = CATALOG.checkedAt;
+    const query = $('catalog-search').value.trim().toLocaleLowerCase('zh-CN');
+    const filtered = products.filter((product) => (catalogFamily === 'all' || product.family === catalogFamily) &&
+      (!query || [product.name, product.short, product.family, product.type, product.feature, ...product.ingredients, ...product.effects].join(' ').toLocaleLowerCase('zh-CN').includes(query)));
+    $('catalog-count').textContent = `找到 ${filtered.length} 款 · 核心成分非完整配方`;
+    const grid = $('catalog-grid'); grid.replaceChildren();
+    if (!filtered.length) {
+      const empty = document.createElement('div'); empty.className = 'catalog-empty';
+      empty.textContent = '没有找到匹配的产品。试试产品昵称、成分或功效。'; grid.append(empty); return;
+    }
+    for (const product of filtered) {
+      const card = document.createElement('article'); card.className = `catalog-card${activeProduct()?.id === product.id ? ' selected' : ''}`;
+      const figure = document.createElement('figure'); figure.className = 'catalog-photo';
+      const photo = document.createElement('img'); photo.src = product.image; photo.alt = `${product.short}产品外观`;
+      photo.loading = 'lazy'; photo.decoding = 'async';
+      const credit = document.createElement('figcaption');
+      const imageSource = document.createElement('a'); imageSource.href = product.imageSource;
+      imageSource.target = '_blank'; imageSource.rel = 'noopener'; imageSource.textContent = '图片来自谷雨官网 ↗';
+      credit.append(imageSource); figure.append(photo, credit);
+      const top = document.createElement('div'); top.className = 'catalog-card-top';
+      const family = document.createElement('span'); family.className = 'catalog-family'; family.textContent = product.family;
+      const kind = document.createElement('span'); kind.className = 'catalog-kind'; kind.textContent = product.type; top.append(family, kind);
+      const title = document.createElement('h3'); title.textContent = product.short;
+      const fullName = document.createElement('small'); fullName.textContent = product.name; title.append(fullName);
+      const feature = document.createElement('p'); feature.textContent = product.feature;
+      const ingredientWrap = document.createElement('div'); ingredientWrap.className = 'catalog-chips'; ingredientWrap.replaceChildren(...product.ingredients.map(makeChip));
+      const ingredientLabel = document.createElement('div'); ingredientLabel.className = 'catalog-label'; ingredientLabel.textContent = '官网公开核心成分';
+      const effectWrap = document.createElement('div'); effectWrap.className = 'catalog-chips effects'; effectWrap.replaceChildren(...product.effects.map(makeChip));
+      const effectLabel = document.createElement('div'); effectLabel.className = 'catalog-label'; effectLabel.textContent = '官网公开功效';
+      const ingredients = document.createElement('div'); ingredients.append(ingredientLabel, ingredientWrap);
+      const effects = document.createElement('div'); effects.append(effectLabel, effectWrap);
+      const details = document.createElement('details'); details.className = 'catalog-details';
+      const summary = document.createElement('summary'); summary.textContent = '查看用法、机制和证据';
+      const detailBody = document.createElement('div'); detailBody.className = 'catalog-detail-body';
+      for (const [label, value] of [['使用方式', product.use], ['作用解释', product.mechanism], ['公开依据', product.evidence]]) {
+        const line = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${label}：`;
+        line.append(strong, document.createTextNode(value)); detailBody.append(line);
+      }
+      const source = document.createElement('a'); source.href = product.source; source.target = '_blank'; source.rel = 'noopener'; source.textContent = `查看${product.sourceType} ↗`; detailBody.append(source);
+      details.append(summary, detailBody);
+      const actions = document.createElement('div'); actions.className = 'catalog-card-actions';
+      const select = document.createElement('button'); select.className = 'catalog-select'; select.type = 'button'; select.dataset.selectProduct = product.id;
+      select.textContent = activeProduct()?.id === product.id ? '正在用于今日护理 ✓' : '选为今日产品';
+      actions.append(select); card.append(figure, top, title, feature, ingredients, effects, details, actions); grid.append(card);
+    }
   }
 
   function showTab(tab, scrollId) {
@@ -56,12 +163,13 @@
 
   function renderWhy() {
     const feeling = record().feeling;
+    const product = activeProduct();
     const content = {
-      comfortable: ['状态平稳时，把护理做得有规律。', '这款面霜的品牌资料以焕亮和修护为护理目标。今天可以按你平时的步骤使用，并留意真实肤感。', '好状态也值得记录；光泽或色泽变化需要更长时间观察。'],
-      dry: ['今天，先关注干燥与紧绷。', '面霜中的保湿、修护相关成分是配方的一部分。你可以记录涂抹后的肤感，并观察干燥感是否随时间变化。', '若干燥持续或加重，调整使用方式并寻求专业意见。'],
+      comfortable: ['状态平稳时，把护理做得有规律。', `官网公开资料将${product.short}用于${product.effects.slice(0, 2).join('、')}护理。按产品说明使用，并留意真实肤感。`, '好状态也值得记录；可观察变化需要更长时间和相近条件。'],
+      dry: ['今天，先关注干燥与紧绷。', `${product.short}的公开资料列有${product.effects.includes('保湿') ? '保湿' : product.effects[0]}功效。先观察使用后的实际肤感，不用动画推断屏障状态。`, '若干燥持续或加重，调整使用方式并寻求专业意见。'],
       irritated: ['出现刺痛或明显泛红时，先暂停。', '暂时不要为了完成打卡继续使用。停止可疑产品；若反应持续或严重，请咨询皮肤科专业人士。', '今天的图谱可以留下一条感受记录，无需完成产品使用。']
     };
-    const [title, copy, bottom] = content[feeling] || ['今天，先照顾好肌肤的感受。', '规律护理是一个过程。先记录今天的肤感，再决定是否继续使用这款面霜。', '你的选择会改变今日提示；这不是皮肤诊断。'];
+    const [title, copy, bottom] = content[feeling] || ['今天，先照顾好肌肤的感受。', `已选${product.short}。先记录今天的肤感，再决定是否按说明使用。`, '你的选择会改变今日提示；这不是皮肤诊断。'];
     $('why-title').textContent = title;
     $('why-copy').textContent = copy;
     $('why-bottom').textContent = bottom;
@@ -78,6 +186,7 @@
       $(`log-${part}`).classList.toggle('done', !!r[part]);
       $(`log-${part}`).setAttribute('aria-pressed', String(!!r[part]));
       $(`status-${part}`).textContent = r[part] ? '已完成 ✓' : '标记完成 +';
+      if (r[part]) $(`log-${part}`).querySelector('.ritual-main small').textContent = r[`${part}ProductId`] ? `已记录：${productById(r[`${part}ProductId`])?.short || '产品已更新'}` : '旧版记录：未标注产品';
     }
   }
 
@@ -125,6 +234,10 @@
       const body = document.createElement('div'); body.className = 'timeline-text';
       const title = document.createElement('strong'); title.textContent = hasUse(r) ? `${r.am ? '晨间' : ''}${r.am && r.pm ? ' + ' : ''}${r.pm ? '夜间' : ''}护理` : '今日肤感';
       const notes = [];
+      if (r.am || r.pm) {
+        const usedProducts = [...new Set([r.am && r.amProductId, r.pm && r.pmProductId].filter(Boolean))].map((id) => productById(id)?.short).filter(Boolean);
+        notes.push(usedProducts.length ? `使用：${usedProducts.join('、')}` : '旧版护理记录：未标注产品');
+      }
       if (r.feeling) notes.push({ comfortable: '状态平稳', dry: '有些干燥', irritated: '刺痛 / 明显泛红' }[r.feeling]);
       if (Number.isInteger(r.dry)) notes.push(`干燥 ${r.dry}/4`);
       if (Number.isInteger(r.dull)) notes.push(`暗沉 ${r.dull}/4`);
@@ -136,7 +249,7 @@
     if (reflections.length >= 3) {
       const first = reflections[reflections.length - 1].r; const last = reflections[0].r;
       const direction = (a, b) => a === b ? '持平' : a < b ? '较低' : '较高';
-      $('insight-text').textContent = `最近与最早一次记录相比，干燥自评${direction(last.dry, first.dry)}，暗沉自评${direction(last.dull, first.dull)}。这只是主观感受的对照，不能证明由这款产品造成；防晒、睡眠和环境也可能影响体验。`;
+      $('insight-text').textContent = `最近与最早一次记录相比，干燥自评${direction(last.dry, first.dry)}，暗沉自评${direction(last.dull, first.dull)}。这只是主观感受的对照，不能证明由某款产品造成；防晒、睡眠和环境也可能影响体验。`;
     } else if (reflections.length) {
       $('insight-text').textContent = `已保存 ${reflections.length} 次完整肤感自评。继续在相近的时间与条件下记录，之后才能更有意义地回看趋势。`;
     } else {
@@ -144,30 +257,27 @@
     }
   }
 
-  function render() { renderWhy(); renderRitual(); renderGrowth(); }
+  function render() { renderTodayProduct(); renderWhy(); renderRitual(); renderGrowth(); renderLab(); }
 
-  const stepInfo = [
-    ['这一步，在做什么？', '面霜在洁面和精华之后使用。涂抹后的柔润感可以立即感受到，但这不能证明深层皮肤状态已经改变。'],
-    ['成分与皮肤，如何关联？', '品牌资料将极光甘草复配成分用于焕亮护理，并列出神经酰胺 NP、泛醇等修护保湿相关成分。图中光点仅表示配方作用的概念。'],
-    ['长期变化，要如何判断？', '持续记录使用、同条件照片与主观感受，再观察几周的趋势。单独一次自拍或动画，不能证明功效或建立因果。']
-  ];
   function renderStep() {
+    const product = activeProduct();
+    const stepInfo = [
+      ['这一步，在做什么？', `${product.use} 涂抹当下可记录肤感，但不能据此推断皮肤内部变化。`],
+      ['成分与皮肤，如何关联？', `${product.mechanism} 官网公开核心成分：${product.ingredients.join('、')}。`],
+      ['长期变化，要如何判断？', '持续记录使用、同条件照片与主观感受，再观察几周趋势。单独一次自拍或动画不能证明功效或建立因果。']
+    ];
     $('step-title').textContent = stepInfo[selectedStep][0]; $('step-text').textContent = stepInfo[selectedStep][1];
     $('zone-label').textContent = ({ cheek: '脸颊区域', forehead: '额头区域', chin: '下巴区域', center: '面部中央' })[selectedZone] || '面部区域';
     document.querySelectorAll('[data-step]').forEach((b) => { b.classList.toggle('active', Number(b.dataset.step) === selectedStep); b.setAttribute('aria-selected', String(Number(b.dataset.step) === selectedStep)); });
     document.querySelectorAll('[data-zone]').forEach((b) => b.classList.toggle('active', b.dataset.zone === selectedZone));
   }
 
-  const mechanism = {
-    cheek: ['脸颊 · 焕亮护理示意', '极光甘草是这款面霜的核心复配成分；光点展示配方设计，不代表此刻测得了美白效果。'],
-    forehead: ['额头 · 表层润泽示意', '面霜中的保湿与修护相关成分用于日常护理；动画表示作用原理，真实肤感由你记录。'],
-    chin: ['下巴 · 屏障护理示意', '配方包含神经酰胺 NP、泛醇等修护保湿相关成分；这里展示的是知识解释。'],
-    center: ['面部中央 · 温和护理示意', '轻柔涂抹并留意当下肤感。产品的长期效果需结合规范记录观察。']
-  };
   function triggerMechanism(zone, point) {
     selectedZone = zone; selectedStep = 1; renderStep();
-    const [title, copy] = mechanism[zone] || mechanism.cheek;
-    arEventTitle.textContent = title; arEventCopy.textContent = copy;
+    const product = activeProduct();
+    const zoneName = ({ cheek: '脸颊', forehead: '额头', chin: '下巴', center: '面部中央' })[zone] || '面部';
+    arEventTitle.textContent = `${zoneName} · ${product.short}机制示意`;
+    arEventCopy.textContent = product.area === 'eye' ? '这款产品用于眼周；此处动画只解释成分，不建议涂抹在所指区域。' : product.mechanism;
     arEvent.hidden = false; arEvent.classList.remove('fade');
     if (eventTimer) clearTimeout(eventTimer);
     eventTimer = setTimeout(() => { arEvent.classList.add('fade'); setTimeout(() => { if (arEvent.classList.contains('fade')) arEvent.hidden = true; }, 400); }, 4600);
@@ -233,8 +343,13 @@
           const codes = await detector.detect($('scan-video'));
           if (!codes.length) return;
           const value = codes[0].rawValue || '';
-          if (/guyu\.com\.cn\/item\/8\.html/i.test(value)) { closeScanner(); showTab('mirror', 'lab-section'); }
-          else $('scan-feedback').textContent = '这个二维码尚未收录。当前可体验美白奶罐 Pro 示例。';
+           let matched = null;
+           try {
+             const url = new URL(value);
+             if (/^(?:www\.)?guyu\.com\.cn$/i.test(url.hostname)) matched = products.find((product) => new URL(product.source).pathname === url.pathname);
+           } catch (_) { /* Ignore non-URL QR codes. */ }
+           if (matched) { closeScanner(); selectProduct(matched.id, false); showTab('mirror', 'lab-section'); }
+           else $('scan-feedback').textContent = '该二维码未匹配到已收录的官网产品；可到产品库搜索。';
         } catch (_) { /* Keep the scan view active. */ }
       }, 700);
     } catch (_) { $('scan-feedback').textContent = '无法打开摄像头；可点击下方示例。'; }
@@ -250,15 +365,30 @@
   document.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab, button.dataset.scroll)));
   $('hero-explore').addEventListener('click', () => $('today-focus').scrollIntoView({ behavior: 'smooth' }));
   $('open-lab').addEventListener('click', () => showTab('mirror', 'lab-section'));
+  $('open-library').addEventListener('click', () => showTab('products'));
+  $('catalog-search').addEventListener('input', renderCatalog);
+  $('catalog-filters').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-family]'); if (!button) return;
+    catalogFamily = button.dataset.family;
+    $('catalog-filters').querySelectorAll('[data-family]').forEach((item) => {
+      const selected = item === button; item.classList.toggle('active', selected); item.setAttribute('aria-pressed', String(selected));
+    });
+    renderCatalog();
+  });
+  $('catalog-grid').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-select-product]');
+    if (button) selectProduct(button.dataset.selectProduct);
+  });
   $('open-scanner').addEventListener('click', openScanner);
   $('scan-close').addEventListener('click', closeScanner);
-  $('scan-sample').addEventListener('click', () => { closeScanner(); showTab('mirror', 'lab-section'); });
+  $('scan-sample').addEventListener('click', () => { closeScanner(); showTab('products'); });
   $('scan-modal').addEventListener('click', (event) => { if (event.target === $('scan-modal')) closeScanner(); });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('scan-modal').hidden) closeScanner(); });
   document.querySelectorAll('[data-feeling]').forEach((button) => button.addEventListener('click', () => updateToday({ feeling: button.dataset.feeling })));
   for (const part of ['am', 'pm']) $(`log-${part}`).addEventListener('click', () => {
     if (record().feeling === 'irritated' && !record()[part]) { $('why-bottom').textContent = '已选择“刺痛 / 明显泛红”：建议暂停使用，先处理不适。'; $('today-focus').scrollIntoView({ behavior: 'smooth' }); return; }
-    updateToday({ [part]: !record()[part] });
+    const nowDone = !record()[part];
+    updateToday({ [part]: nowDone, [`${part}ProductId`]: nowDone ? activeProduct().id : null });
   });
   $('camera-toggle').addEventListener('click', toggleMirror);
   document.querySelectorAll('[data-zone]').forEach((button) => button.addEventListener('click', () => {
@@ -281,5 +411,5 @@
     } else $('reflection-feedback').textContent = '请先选择两项感受的程度。';
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopMirror(); if (!$('scan-modal').hidden) closeScanner(); } });
-  renderStep(); render();
+  renderStep(); render(); renderCatalog();
 })();
