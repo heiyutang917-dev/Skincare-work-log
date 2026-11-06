@@ -14,10 +14,11 @@
   <link rel="stylesheet" href="modal.css">
   <link rel="stylesheet" href="ar.css">
   <link rel="stylesheet" href="catalog.css">
+  <link rel="stylesheet" href="journey.css?v=1">
   <script defer src="products.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="app.js?v=journey1"></script>
 </head>
-<body>
+<body class="is-welcome">
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-seal">谷<br>雨</div><div><strong>知肤生长图谱</strong><small>让植萃科学看得见</small></div></div>
@@ -34,7 +35,15 @@
     <main class="main-content">
       <header class="topbar"><span class="topbar-brand">谷雨 <i>·</i> 知肤生长图谱</span><span class="prototype-badge">概念原型</span></header>
 
-      <section class="page active" id="page-today" aria-labelledby="today-title">
+      <section class="page active welcome-page" id="page-welcome" aria-labelledby="welcome-title">
+        <div class="welcome-top"><span class="welcome-brand">谷雨 <i>·</i> 知肤生长图谱</span><button type="button" class="welcome-history" data-journey="growth">我的图谱 ↗</button></div>
+        <div class="welcome-body"><div class="welcome-mark" aria-hidden="true"><span class="welcome-orbit"></span><span class="welcome-leaf one"></span><span class="welcome-leaf two"></span><span class="welcome-drop"></span></div>
+          <div class="welcome-kicker">A LITTLE RITUAL, EVERY DAY</div><h1 id="welcome-title">每一次护理，<br><em>都值得被看见。</em></h1><p>选择你正在使用的产品，<br>看懂它的作用，记录属于你的变化。</p>
+          <button type="button" class="welcome-start" data-journey="products">探索今日护理 <span>↗</span></button><div class="welcome-steps">选择产品 <span>—</span> 了解作用 <span>—</span> 留下记录</div></div>
+        <div class="welcome-foot">谷雨植萃 · 每日知肤 <span>独立概念原型</span></div>
+      </section>
+
+      <section class="page" id="page-today" aria-labelledby="today-title">
         <div class="hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-line"></span><span id="date-label"></span> · 今日知肤</div><h1 id="today-title">每一次护理，<br><em>都值得被看见。</em></h1><p>看懂这款产品为什么用、如何发挥作用，再把真实的日常留在自己的肌肤图谱里。</p><button class="primary-btn" id="hero-explore">探索今日护理 <span>↗</span></button></div><div class="hero-art" aria-hidden="true"><div class="art-halo"></div><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-center"><div class="art-leaf leaf-one"></div><div class="art-leaf leaf-two"></div><div class="art-drop"></div></div><div class="art-label art-label-one">理解成分</div><div class="art-label art-label-two">记录变化</div></div></div>
 
         <div class="section-heading" id="today-focus"><div><div class="section-kicker">01 / TODAY</div><h2>今天的护理，从理解开始</h2></div><span class="subtle">一款产品 · 一段可追溯的解释</span></div>

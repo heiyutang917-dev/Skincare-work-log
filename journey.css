@@ -1,0 +1,28 @@
+body.is-welcome{overflow:hidden}
+body.is-welcome .sidebar,body.is-welcome .topbar,body.is-welcome .mobile-nav,body.is-welcome .site-footer{display:none}
+body.is-welcome .main-content{margin:0}
+.sidebar,.mobile-nav{display:none}
+.main-content{margin-left:0}
+.page{max-width:1080px}
+.welcome-page.active{display:flex;flex-direction:column;justify-content:space-between;box-sizing:border-box;width:100%;max-width:none;height:100vh;height:100dvh;min-height:0;padding:max(22px,env(safe-area-inset-top)) clamp(24px,6vw,72px) max(20px,env(safe-area-inset-bottom));background:radial-gradient(ellipse at 75% 22%,#e2ecdd 0,transparent 42%),linear-gradient(145deg,#f7f8ef,#eff3e8 68%,#e5eee1);color:#355a40;overflow:hidden}
+.welcome-top,.welcome-foot{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.welcome-brand{font-family:"Songti SC","SimSun",serif;font-size:14px;letter-spacing:.14em}.welcome-brand i{font-style:normal;color:#9caf98}.welcome-history{background:none;border:0;color:#69836c;font-size:12px;padding:8px 0}
+.welcome-body{max-width:650px;margin:auto;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+.welcome-mark{height:clamp(85px,19vh,160px);width:clamp(85px,19vh,160px);position:relative;margin-bottom:clamp(12px,3vh,27px)}
+.welcome-orbit{position:absolute;inset:3%;border:1px solid #acc5aa;border-radius:50%}.welcome-orbit:after{content:"";position:absolute;inset:11%;border:1px solid #d0dfcc;border-radius:50%}
+.welcome-leaf{position:absolute;z-index:1;top:30%;width:26%;height:39%;background:linear-gradient(145deg,#aac6a5,#729c77);border-radius:100% 0 100% 0}.welcome-leaf.one{left:27%;transform:rotate(-24deg)}.welcome-leaf.two{right:27%;transform:scaleX(-1) rotate(-24deg);background:linear-gradient(145deg,#d3dfbf,#96b991)}
+.welcome-drop{position:absolute;z-index:2;left:47%;bottom:23%;height:28%;width:5%;border-radius:8px;background:#648b69}
+.welcome-kicker{font-size:10px;letter-spacing:.22em;color:#89a186}
+.welcome-body h1{font-family:"Songti SC","STSong","SimSun",serif;font-size:clamp(31px,7vw,53px);font-weight:400;line-height:1.3;letter-spacing:.03em;margin:clamp(12px,2.5vh,24px) 0 14px}.welcome-body h1 em{font-style:normal;color:#6b9470}
+.welcome-body p{font-size:clamp(12px,3.2vw,15px);line-height:1.9;color:#7b927b;margin:0 0 clamp(18px,4vh,34px)}
+.welcome-start{border:0;border-radius:999px;background:#456e4d;color:white;padding:15px 24px;min-width:220px;display:flex;justify-content:space-between;gap:28px;align-items:center;font-size:13px;box-shadow:0 12px 25px #5a80532a}.welcome-start span{font-size:17px}
+.welcome-steps{margin-top:clamp(12px,3vh,25px);font-size:10px;letter-spacing:.08em;color:#90a28d}.welcome-steps span{margin:0 6px;color:#c0cdbb}
+.welcome-foot{font-size:10px;letter-spacing:.1em;color:#91a390}.welcome-foot span{letter-spacing:0}
+.journey-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 0;color:#789279;font-size:11px}.journey-bar button,.journey-link{border:0;background:none;padding:10px 0;color:#527b58;font-size:12px}.journey-progress{letter-spacing:.08em;color:#9aa99a}.journey-current{background:#eaf2e7;border-radius:12px;padding:12px 15px;margin:12px 0 18px;color:#68846a;font-size:12px;line-height:1.6}.journey-current strong{color:#365d3d}
+.journey-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:18px 0 8px}.journey-actions .primary-btn{min-height:44px}.journey-actions .journey-link{min-height:44px}
+#page-today .hero,#page-today .three-grid,#page-today .feature-heading{display:none}
+#page-today .section-heading:first-of-type{margin-top:25px}
+.catalog-select{font-size:11px;min-height:44px}
+@media(max-width:800px){.page{padding-bottom:42px}.site-footer{padding-bottom:30px}.topbar{height:52px}}
+@media(max-width:650px){.welcome-page.active{padding-left:24px;padding-right:24px}.journey-bar{margin-top:13px}.welcome-start{min-width:210px}}
+@media(max-height:570px){.welcome-page.active{padding-top:12px;padding-bottom:12px}.welcome-mark{height:70px;width:70px;margin-bottom:8px}.welcome-body h1{font-size:30px;margin:8px 0}.welcome-body p{line-height:1.5;margin-bottom:12px}.welcome-steps{margin-top:10px}}

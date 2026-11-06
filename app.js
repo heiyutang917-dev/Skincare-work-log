@@ -19,7 +19,7 @@
   let eventTimer = null;
   let selectedStep = 0;
   let selectedZone = 'cheek';
-  let activeTab = 'today';
+  let activeTab = 'welcome';
   let previousFocus = null;
   let draftRatings = {};
   let catalogFamily = 'all';
@@ -34,6 +34,17 @@
   $('page-mirror').querySelector('.page-heading p').textContent = '打开前置摄像头，把脸和食指放进画面。食指靠近脸颊、额头等区域并短暂停留时，局部会出现对应的机制动画。识别的是画面位置接近，单个摄像头不能确认真实触碰或检测皮肤内部。';
   stage.querySelector('.camera-caption').textContent = '把脸和食指放进画面 · 也可点选区域体验';
   stage.parentElement.querySelector('.camera-foot > span').textContent = '◈ 通过面部与手指关键点判断画面位置；动画是产品机制示意。';
+  $('page-products').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 返回首页</button><span class="journey-progress">01 / 选择产品</span></div>');
+  $('page-mirror').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="products">← 更换产品</button><span class="journey-progress">02 / 了解作用</span><button type="button" data-journey="today">记录护理 →</button></div><div class="journey-current">正在了解：<strong class="journey-product"></strong> · 点选面部区域也可体验，或直接记录</div>');
+  $('page-mirror').querySelector('.mirror-layout').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="today">继续，记录护理 ↗</button><button type="button" class="journey-link" data-journey="products">更换产品</button></div>');
+  $('page-today').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="mirror">← 返回 AR</button><span class="journey-progress">03 / 留下记录</span><button type="button" data-journey="growth">跳过记录 →</button></div><div class="journey-current">本次选择：<strong class="journey-product"></strong> · 按实际使用情况记录</div>');
+  $('page-today').querySelector('.note-bar').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="growth">查看我的成长图谱 ↗</button><button type="button" class="journey-link" data-journey="products">选择其他产品</button></div>');
+  $('page-growth').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 回到首页</button><span class="journey-progress">04 / 成长图谱</span><button type="button" data-journey="products">选择产品 →</button></div>');
+  $('page-growth').insertAdjacentHTML('beforeend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="products">再选一款产品 ↗</button><button type="button" class="journey-link" data-journey="welcome">结束，回到首页</button></div>');
+  document.querySelector('.three-grid')?.previousElementSibling?.classList.add('feature-heading');
+  $('page-products').querySelector('h1').innerHTML = '今天的护理，<br><em>从选择产品开始。</em>';
+  $('page-products').querySelector('.page-heading p').innerHTML = '在 <strong id="catalog-total">16</strong> 款谷雨产品中找到你正在使用的产品，点击按钮继续了解护理作用。';
+  $('today-focus').querySelector('h2').textContent = '记录今天的护理';
 
   try {
     const stored = JSON.parse(localStorage.getItem(STORE));
@@ -55,7 +66,7 @@
     if (!productById(id)) return;
     state.selectedProductId = id;
     save(); render(); renderStep(); renderCatalog();
-    if (goToToday) showTab('today', 'today-focus');
+    if (goToToday) showTab('mirror');
   }
 
   function renderTodayProduct() {
@@ -63,6 +74,7 @@
     $('today-product-family').textContent = product.family === '双效护理' ? '谷雨双效护理产品' : `谷雨${product.family}系列`;
     $('today-product-short').textContent = product.short;
     $('today-product-name').textContent = product.name;
+    document.querySelectorAll('.journey-product').forEach((element) => { element.textContent = product.short; });
     $('today-bottle-name').textContent = product.short;
     const visual = document.querySelector('.product-bottle');
     let photo = visual.querySelector('.today-product-photo');
@@ -116,7 +128,7 @@
       empty.textContent = '没有找到匹配的产品。试试产品昵称、成分或功效。'; grid.append(empty); return;
     }
     for (const product of filtered) {
-      const card = document.createElement('article'); card.className = `catalog-card${activeProduct()?.id === product.id ? ' selected' : ''}`;
+      const card = document.createElement('article'); card.className = `catalog-card${state.selectedProductId === product.id ? ' selected' : ''}`;
       const figure = document.createElement('figure'); figure.className = 'catalog-photo';
       const photo = document.createElement('img'); photo.src = product.image; photo.alt = `${product.short}产品外观`;
       photo.loading = 'lazy'; photo.decoding = 'async';
@@ -147,13 +159,14 @@
       details.append(summary, detailBody);
       const actions = document.createElement('div'); actions.className = 'catalog-card-actions';
       const select = document.createElement('button'); select.className = 'catalog-select'; select.type = 'button'; select.dataset.selectProduct = product.id;
-      select.textContent = activeProduct()?.id === product.id ? '正在用于今日护理 ✓' : '选为今日产品';
+      select.textContent = '选择并进入 AR ↗';
       actions.append(select); card.append(figure, top, title, feature, ingredients, effects, details, actions); grid.append(card);
     }
   }
 
   function showTab(tab, scrollId) {
     activeTab = tab;
+    document.body.classList.toggle('is-welcome', tab === 'welcome');
     document.querySelectorAll('.page').forEach((el) => el.classList.toggle('active', el.id === `page-${tab}`));
     document.querySelectorAll('[data-tab]').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab && (el.classList.contains('nav-item') || el.closest('.mobile-nav'))));
     if (tab !== 'mirror') stopMirror();
@@ -363,7 +376,11 @@
 
   $('date-label').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
   document.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab, button.dataset.scroll)));
-  $('hero-explore').addEventListener('click', () => $('today-focus').scrollIntoView({ behavior: 'smooth' }));
+  $('hero-explore').addEventListener('click', () => showTab('products'));
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-journey]');
+    if (button) showTab(button.dataset.journey);
+  });
   $('open-lab').addEventListener('click', () => showTab('mirror', 'lab-section'));
   $('open-library').addEventListener('click', () => showTab('products'));
   $('catalog-search').addEventListener('input', renderCatalog);
