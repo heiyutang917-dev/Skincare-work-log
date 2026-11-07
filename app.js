@@ -31,8 +31,17 @@
   const arEventTitle = document.createElement('strong');
   const arEventCopy = document.createElement('small');
   arEvent.append(arEventTitle, arEventCopy); stage.append(arEvent);
+  const skin = new window.GUYU_SKIN.SkinExperience({ panel: document.querySelector('.mirror-panel'), stage,
+    onStep: (step) => { selectedStep = step; renderStep(); }
+  });
+  stage.parentElement.querySelector('.camera-top > span').innerHTML = '<span class="camera-indicator"></span> <span id="camera-mode">点选体验</span>';
+  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 点「开启摄像头」并允许权限。<br>② 面部居中，让脸和食指同时入镜。<br>③ 食指靠近脸颊或额头，停留片刻；移开后可再次触发。<br>手机只判断画面位置接近，不能确认实际触碰。点选区域随时可用。</div></div>');
+  $('camera-help').addEventListener('click', () => {
+    const expanded = $('camera-help').getAttribute('aria-expanded') !== 'true';
+    $('camera-help').setAttribute('aria-expanded', String(expanded)); $('camera-help-copy').hidden = !expanded;
+  });
   $('page-mirror').querySelector('.page-heading p').textContent = '手指靠近脸颊，或轻点画面，探索成分作用。';
-  stage.querySelector('.camera-caption').textContent = '把脸和食指放进画面 · 也可点选区域体验';
+  stage.querySelector('.camera-caption').textContent = '点选脸颊或额头 · 先体验配方示意';
   stage.parentElement.querySelector('.camera-foot > span').textContent = '◈ 通过面部与手指关键点判断画面位置；动画是产品机制示意。';
   $('page-products').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 首页</button><span class="journey-progress">01 <i></i> 02 <i></i> 03</span></div>');
   $('page-mirror').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="products">← 产品</button><span class="journey-progress">第 2 步 / 共 3 步</span><button type="button" data-journey="today">去记录 →</button></div>');
@@ -113,6 +122,7 @@
 
   function selectProduct(id, goToToday = true) {
     if (!productById(id)) return;
+    skin.stop(); clearTimeout(eventTimer); arEvent.hidden = true; selectedStep = 0; selectedZone = 'cheek';
     state.selectedProductId = id;
     save(); render(); renderStep(); renderCatalog();
     if (goToToday) showTab('mirror');
@@ -158,7 +168,7 @@
     $('lab-formula').textContent = product.feature;
     $('lab-goal').textContent = product.effects.slice(0, 2).join(' + ');
     $('lab-evidence-title').textContent = `${product.short}为什么这样设计？`;
-    $('lab-evidence-copy').textContent = `${product.mechanism} ${product.evidence}`;
+    $('lab-evidence-copy').textContent = window.GUYU_SKIN.profile(product).pending ? '本次读取的详情与目录名称不一致，此处仅保留历史产品资料；专属成分机制待复核。请以包装与品牌最新说明为准。' : `${product.mechanism} ${product.evidence}`;
     $('lab-evidence-tags').replaceChildren(...[product.sourceType, ...product.effects.slice(0, 2), '实际效果因人而异'].map(makeChip));
     $('lab-evidence-source').href = product.source;
     $('lab-evidence-source').textContent = `阅读${product.sourceType} ↗`;
@@ -200,6 +210,9 @@
       const details = document.createElement('details'); details.className = 'catalog-details';
       const summary = document.createElement('summary'); summary.textContent = '成分与功效';
       const detailBody = document.createElement('div'); detailBody.className = 'catalog-detail-body';
+      if (window.GUYU_SKIN.profile(product).pending) {
+        const notice = document.createElement('p'); notice.className = 'source-pending'; notice.textContent = '资料待复核：本次详情名称与目录不一致。以下为历史快照，专属机制暂不展示。'; detailBody.append(notice);
+      }
       detailBody.append(ingredients, effects);
       for (const [label, value] of [['产品特点', product.feature], ['使用方式', product.use], ['作用解释', product.mechanism], ['公开依据', product.evidence]]) {
         const line = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${label}：`;
@@ -226,7 +239,7 @@
       if (current) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
     });
     if (tab === 'welcome') resetSlide();
-    if (tab !== 'mirror') stopMirror();
+    if (tab !== 'mirror') { stopMirror(); skin.stop(); clearTimeout(eventTimer); arEvent.hidden = true; }
     window.scrollTo({ top: 0, behavior: 'instant' });
     const heading = $(`page-${tab}`).querySelector('h1, h2');
     if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
@@ -333,58 +346,57 @@
 
   function renderStep() {
     const product = activeProduct();
-    const stepInfo = [
-      ['这一步，在做什么？', `${product.use} 涂抹当下可记录肤感，但不能据此推断皮肤内部变化。`],
-      ['成分与皮肤，如何关联？', `${product.mechanism} 官网公开核心成分：${product.ingredients.join('、')}。`],
-      ['长期变化，要如何判断？', '持续记录使用、同条件照片与主观感受，再观察几周趋势。单独一次自拍或动画不能证明功效或建立因果。']
-    ];
-    $('step-title').textContent = stepInfo[selectedStep][0]; $('step-text').textContent = stepInfo[selectedStep][1];
-    $('zone-label').textContent = ({ cheek: '脸颊区域', forehead: '额头区域', chin: '下巴区域', center: '面部中央' })[selectedZone] || '面部区域';
-    document.querySelectorAll('[data-step]').forEach((b) => { b.classList.toggle('active', Number(b.dataset.step) === selectedStep); b.setAttribute('aria-selected', String(Number(b.dataset.step) === selectedStep)); });
+    skin.render(product, selectedStep);
+    $('camera-guidance').textContent = product.area === 'eye' ? '眼周产品：点选查看原理，无需触碰眼周' : mirrorStream ? '面部居中，让食指靠近脸颊并停留片刻' : '先点一个区域，看看作用示意';
     document.querySelectorAll('[data-zone]').forEach((b) => b.classList.toggle('active', b.dataset.zone === selectedZone));
   }
 
   function triggerMechanism(zone, point) {
-    selectedZone = zone; selectedStep = 1; renderStep();
+    selectedZone = zone; skin.trigger(point);
     const product = activeProduct();
     const zoneName = ({ cheek: '脸颊', forehead: '额头', chin: '下巴', center: '面部中央' })[zone] || '面部';
-    arEventTitle.textContent = `${zoneName} · ${product.short}机制示意`;
-    arEventCopy.textContent = product.area === 'eye' ? '这款产品用于眼周；此处动画只解释成分，不建议涂抹在所指区域。' : product.mechanism;
+    arEventTitle.textContent = `${zoneName} · ${window.GUYU_SKIN.profile(product).title}`;
+    arEventCopy.textContent = product.area === 'eye' ? '此处仅讲解眼周配方，不指引在该区域涂抹。' : '局部图为配方示意；下方可暂停、重播与查看依据。';
     arEvent.hidden = false; arEvent.classList.remove('fade');
     if (eventTimer) clearTimeout(eventTimer);
-    eventTimer = setTimeout(() => { arEvent.classList.add('fade'); setTimeout(() => { if (arEvent.classList.contains('fade')) arEvent.hidden = true; }, 400); }, 4600);
-    const x = Math.max(25, Math.min(stage.clientWidth - 25, point?.x ?? stage.clientWidth / 2));
-    const y = Math.max(25, Math.min(stage.clientHeight - 25, point?.y ?? stage.clientHeight / 2));
-    const bloom = document.createElement('div'); bloom.className = 'ar-bloom';
-    bloom.style.left = `${x}px`; bloom.style.top = `${y}px`;
-    for (let i = 0; i < 5; i++) bloom.append(document.createElement('span'));
-    stage.append(bloom); setTimeout(() => bloom.remove(), 2200);
+    eventTimer = setTimeout(() => { arEvent.hidden = true; }, 3200);
   }
   async function toggleMirror() {
     if (mirrorStream) { stopMirror(); return; }
     if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
-      $('camera-message').textContent = '请在 HTTPS 手机网页或本机 localhost 打开，才能使用摄像头。'; return;
+      $('camera-message').textContent = '当前环境无法开启摄像头。可点选脸颊或额头体验；相机需在 HTTPS 链接中使用。'; return;
     }
     const run = ++cameraRun;
     $('camera-toggle').disabled = true;
+    $('camera-mode').textContent = '等待相机权限';
     $('camera-message').textContent = '正在请求前置摄像头…';
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
       if (run !== cameraRun) { stream.getTracks().forEach((track) => track.stop()); return; }
       mirrorStream = stream;
       const video = $('camera-video'); video.srcObject = stream; await video.play();
+      if (run !== cameraRun) { stream.getTracks().forEach((track) => track.stop()); return; }
       stage.classList.add('camera-on');
       $('camera-toggle').textContent = '关闭摄像头';
+      $('camera-toggle').disabled = false;
+      $('camera-mode').textContent = '准备手势识别';
+      renderStep();
       $('camera-message').textContent = '正在加载面部与手部识别模型，首次打开需要片刻…';
-      const { startARMirror } = await import('./ar-mirror.mjs');
+      const { startARMirror } = await import('./ar-mirror.mjs?v=ar2');
+      if (run !== cameraRun) return;
       const session = await startARMirror({ video, stage, canvas: overlay,
-        onApproach: triggerMechanism, onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
+        onApproach: (zone, point) => { if (run === cameraRun) triggerMechanism(zone, point); },
+        onFace: (bounds) => { if (run === cameraRun) skin.follow(bounds); },
+        onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); $('camera-mode').textContent = '相机 · 点选可用'; skin.clearAnchor(); } },
+        onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
       });
       if (run !== cameraRun) { session.stop(); return; }
-      arSession = session; stage.classList.add('ar-ready');
+      arSession = session; stage.classList.add('ar-ready'); $('camera-mode').textContent = '面部与手指识别中';
     } catch (error) {
-      $('camera-message').textContent = mirrorStream ? '实时识别未能启动；可点选画面区域体验机制动画。' : '无法打开摄像头；请检查权限或使用 HTTPS 页面。';
-      console.warn('AR mirror unavailable:', error);
+      if (run !== cameraRun) return;
+      if (mirrorStream && !stage.classList.contains('camera-on')) { mirrorStream.getTracks().forEach(track => track.stop()); mirrorStream = null; $('camera-video').srcObject = null; }
+      $('camera-mode').textContent = mirrorStream ? '相机 · 点选可用' : '点选体验';
+      $('camera-message').textContent = mirrorStream ? '实时识别暂不可用，仍可点选脸颊或额头查看动画。' : error.name === 'NotAllowedError' ? '未获相机权限，点选体验仍可使用。需要相机时可在浏览器设置中允许。' : '暂时无法打开相机，可先点选区域体验原理。';
     } finally { if (run === cameraRun) $('camera-toggle').disabled = false; }
   }
   function stopMirror() {
@@ -394,6 +406,10 @@
     $('camera-video').srcObject = null; stage.classList.remove('camera-on', 'ar-ready');
     overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
     $('camera-toggle').disabled = false; $('camera-toggle').textContent = '开启摄像头';
+    $('camera-mode').textContent = '点选体验';
+    $('camera-message').textContent = '相机未开启；点选体验可用。画面仅在本页处理。';
+    skin.pause(); skin.clearAnchor();
+    if (skin.product) renderStep();
   }
 
   async function openScanner() {
@@ -469,10 +485,11 @@
   $('camera-toggle').addEventListener('click', toggleMirror);
   document.querySelectorAll('[data-zone]').forEach((button) => button.addEventListener('click', () => {
     const target = button.getBoundingClientRect(), bounds = stage.getBoundingClientRect();
-    triggerMechanism(button.dataset.zone, { x: target.left + target.width / 2 - bounds.left, y: target.top + target.height / 2 - bounds.top });
+    const point = stage.contains(button) ? { x: target.left + target.width / 2 - bounds.left, y: target.top + target.height / 2 - bounds.top } :
+      { x: bounds.width * (button.dataset.zone === 'forehead' ? .5 : .29), y: bounds.height * (button.dataset.zone === 'forehead' ? .28 : .58) };
+    triggerMechanism(button.dataset.zone, point);
   }));
-  document.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => { selectedStep = Number(button.dataset.step); renderStep(); }));
-  $('mirror-to-growth').addEventListener('click', () => showTab('growth'));
+  document.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => skin.choose(Number(button.dataset.step))));
   document.querySelectorAll('.rating-options').forEach((container) => container.addEventListener('click', (event) => {
     const button = event.target.closest('[data-rating]'); if (!button) return;
     const key = button.dataset.rating; const score = Number(button.dataset.score);

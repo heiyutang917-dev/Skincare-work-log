@@ -47,4 +47,8 @@ export class ApproachGate {
     this.lastTrigger = now; this.latched = zone; return zone;
   }
   reset() { this.candidate = null; this.frames = 0; this.latched = null; }
+  progress(now) {
+    if (!this.candidate) return 0;
+    return Math.max(0, Math.min(1, this.frames / Math.max(1, this.minFrames), (now - this.since) / Math.max(1, this.holdMs)));
+  }
 }

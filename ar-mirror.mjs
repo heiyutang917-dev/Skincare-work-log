@@ -1,10 +1,10 @@
-import { ApproachGate, faceZone, toStagePoint } from './ar-engine.mjs';
+import { ApproachGate, faceBounds, faceZone, toStagePoint } from './ar-engine.mjs?v=ar2';
 
 /**
  * Runs face + hand landmark detection entirely inside the visitor's browser.
  * A fingertip overlapping the facial region in 2D is only an approximation of touch.
  */
-export async function startARMirror({ video, stage, canvas, onApproach, onStatus }) {
+export async function startARMirror({ video, stage, canvas, onApproach, onStatus, onFace = () => {}, onFallback = () => {} }) {
   const { FilesetResolver, FaceLandmarker, HandLandmarker } = await import('./vendor/vision_bundle.mjs');
   const wasm = await FilesetResolver.forVisionTasks(new URL('./vendor/wasm/', import.meta.url).href);
   let faceTask;
@@ -34,6 +34,7 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
   let lastFaceAt = -Infinity;
   let zone = null;
   let status = '';
+  let holdProgress = 0;
 
   function say(next) { if (next !== status) { status = next; onStatus(next); } }
   function resizeCanvas() {
@@ -73,6 +74,10 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
       ctx.fillStyle = zone ? 'rgba(255,230,160,.33)' : 'rgba(210,251,209,.25)'; ctx.fill();
       ctx.beginPath(); ctx.arc(tip.x, tip.y, 3.2, 0, Math.PI * 2);
       ctx.fillStyle = '#fffaf0'; ctx.fill();
+      if (zone && holdProgress > 0) {
+        ctx.beginPath(); ctx.arc(tip.x, tip.y, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * holdProgress);
+        ctx.strokeStyle = '#fff1b7'; ctx.lineWidth = 3; ctx.stroke();
+      }
     }
   }
   function infer(now) {
@@ -84,18 +89,27 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
     if (resultFace.faceLandmarks[0]) { lastFace = resultFace.faceLandmarks[0]; lastFaceAt = now; }
     else if (now - lastFaceAt > 450) lastFace = null;
     lastHand = resultHand.landmarks[0] || null;
-    if (!lastFace) { zone = null; gate.update(null, now); say('请把脸放入画面中央。'); return; }
-    if (!lastHand?.[8]) { zone = null; gate.update(null, now); say('已定位面部。请用食指靠近脸颊或额头。'); return; }
+    if (!resultFace.faceLandmarks[0]) { zone = null; holdProgress = 0; gate.update(null, now); onFace(null); say('请把脸放入画面中央；点选体验随时可用。'); return; }
+    const box = faceBounds(lastFace);
+    if (!box) { zone = null; holdProgress = 0; gate.update(null, now); onFace(null); return; }
+    const upper = position({ x: box.right, y: box.top }), lower = position({ x: box.left, y: box.bottom });
+    const frame = { left: upper.x, top: upper.y, width: lower.x - upper.x, height: lower.y - upper.y };
+    onFace(frame);
+    if (!lastHand?.[8]) { zone = null; holdProgress = 0; gate.update(null, now); say('已找到面部。让食指靠近脸颊或额头，停留片刻。'); return; }
     zone = faceZone(lastFace, lastHand[8]);
-    if (!zone) { gate.update(null, now); say('已找到脸和手。让食指在面部区域停留片刻。'); return; }
+    if (!zone) { holdProgress = 0; gate.update(null, now); say('已找到脸和手。让食指靠近脸颊或额头，避开眼睛。'); return; }
     const shown = gate.update(zone, now);
-    say(shown ? '已触发局部机制动画。' : '已检测到食指接近面部，保持片刻…');
-    if (shown) onApproach(shown, position(lastHand[8]));
+    holdProgress = gate.progress(now);
+    say(gate.latched === zone ? '已触发作用示意。移开手指后，可以再次体验。' : '检测到画面位置接近，保持片刻…');
+    if (shown) {
+      const tip = position(lastHand[8]);
+      onApproach(shown, { ...tip, anchor: { u: (tip.x - frame.left) / frame.width, v: (tip.y - frame.top) / frame.height } });
+    }
   }
   function loop(now) {
     if (stopped) return;
     try { infer(now); draw(now); }
-    catch (error) { say('实时识别暂停；仍可点击画面上的区域体验动画。'); stop(); return; }
+    catch (error) { say('实时识别暂停；仍可点选脸颊或额头体验动画。'); stop(); onFallback(); return; }
     frameId = requestAnimationFrame(loop);
   }
   function stop() {
@@ -103,6 +117,7 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
     stopped = true; cancelAnimationFrame(frameId);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     faceTask?.close(); handTask?.close();
+    onFace(null);
   }
   say('模型已就绪。请把脸和食指放进画面。');
   frameId = requestAnimationFrame(loop);
