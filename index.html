@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#edf2e9">
+  <meta name="theme-color" content="#eaf0ed">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
@@ -15,8 +15,9 @@
   <link rel="stylesheet" href="ar.css">
   <link rel="stylesheet" href="catalog.css">
   <link rel="stylesheet" href="journey.css?v=1">
+  <link rel="stylesheet" href="visual-refresh.css?v=minimal3">
   <script defer src="products.js"></script>
-  <script defer src="app.js?v=journey1"></script>
+  <script defer src="app.js?v=minimal3"></script>
 </head>
 <body class="is-welcome">
   <div class="app-shell">
@@ -36,11 +37,16 @@
       <header class="topbar"><span class="topbar-brand">谷雨 <i>·</i> 知肤生长图谱</span><span class="prototype-badge">概念原型</span></header>
 
       <section class="page active welcome-page" id="page-welcome" aria-labelledby="welcome-title">
-        <div class="welcome-top"><span class="welcome-brand">谷雨 <i>·</i> 知肤生长图谱</span><button type="button" class="welcome-history" data-journey="growth">我的图谱 ↗</button></div>
-        <div class="welcome-body"><div class="welcome-mark" aria-hidden="true"><span class="welcome-orbit"></span><span class="welcome-leaf one"></span><span class="welcome-leaf two"></span><span class="welcome-drop"></span></div>
-          <div class="welcome-kicker">A LITTLE RITUAL, EVERY DAY</div><h1 id="welcome-title">每一次护理，<br><em>都值得被看见。</em></h1><p>选择你正在使用的产品，<br>看懂它的作用，记录属于你的变化。</p>
-          <button type="button" class="welcome-start" data-journey="products">探索今日护理 <span>↗</span></button><div class="welcome-steps">选择产品 <span>—</span> 了解作用 <span>—</span> 留下记录</div></div>
-        <div class="welcome-foot">谷雨植萃 · 每日知肤 <span>独立概念原型</span></div>
+        <div class="welcome-top">
+          <div class="welcome-brand"><strong>谷雨</strong><span>知肤<br><small>SKIN JOURNAL</small></span></div>
+          <button type="button" class="welcome-history" data-journey="growth" aria-label="查看我的护理记录"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v4H1M4 7a9 9 0 1 1-1 9M12 7v5l3 2"/></svg><span>我的记录</span></button>
+        </div>
+        <div class="welcome-body">
+          <div class="welcome-intro"><div class="welcome-kicker"><span></span> 每日知肤 · 从容开始</div><h1 id="welcome-title" tabindex="-1">给肌肤，<br><em>多一点了解。</em></h1><p>看懂每一次护理，<br>也看见自己慢慢坚持的日常。</p></div>
+          <div class="welcome-ritual"><div class="ritual-caption"><span>今天的护理</span><span id="welcome-date"></span></div><ol class="welcome-steps"><li><span>01</span><strong>选产品</strong></li><li><span>02</span><strong>看懂作用</strong></li><li><span>03</span><strong>记录感受</strong></li></ol></div>
+          <div class="welcome-entry"><div class="slide-entry" id="slide-entry"><span class="slide-fill" aria-hidden="true"></span><span id="slide-label" class="slide-label">向右滑动，开始护理</span><span class="slide-end" aria-hidden="true">››</span><button type="button" class="slide-thumb" id="slide-thumb" aria-label="开始今日护理：向右拖动，或轻点进入"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div><button type="button" class="welcome-start" data-journey="products">也可轻点进入 <span aria-hidden="true">↗</span></button></div>
+        </div>
+        <div class="welcome-foot"><span>GUYU · SKIN JOURNAL</span><span>独立概念设计</span></div>
       </section>
 
       <section class="page" id="page-today" aria-labelledby="today-title">
@@ -80,7 +86,7 @@
 
       <footer class="site-footer"><div>谷雨「知肤生长图谱」概念原型 · 非谷雨官方产品</div><div>示意动画 ≠ 皮肤内部检测 · 自评变化 ≠ 产品功效证明</div></footer>
     </main>
-    <nav class="mobile-nav" aria-label="底部导航"><button class="active" data-tab="today"><span>◌</span>今日</button><button data-tab="products"><span>✦</span>产品库</button><button data-tab="mirror"><span>◎</span>知肤镜</button><button data-tab="growth"><span>◴</span>图谱</button></nav>
+    <nav class="mobile-nav" aria-label="底部导航"><button data-tab="welcome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>首页</span></button><button data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v14H7zM9 7V3h6v4M10 12h4"/></svg><span>护理</span></button><button data-tab="growth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v16H5zM8 2v6M16 2v6M5 10h14M9 14h1M14 14h1M9 17h1"/></svg><span>记录</span></button></nav>
     <div class="modal-backdrop" id="scan-modal" hidden><div class="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title"><button id="scan-close" class="modal-close" aria-label="关闭">×</button><div class="section-kicker">PRODUCT LOOKUP / 产品识别</div><h2 id="scan-title">扫描官网产品二维码</h2><p>将二维码放进取景框。原型仅匹配产品库已收录的谷雨官网链接；也可以直接在产品库搜索。</p><div class="scan-frame"><video id="scan-video" autoplay playsinline muted></video><div class="scan-corners"></div></div><div id="scan-feedback" aria-live="polite">正在准备摄像头…</div><button class="primary-btn" id="scan-sample">前往产品库搜索 <span>↗</span></button></div></div>
   </div>
 </body>

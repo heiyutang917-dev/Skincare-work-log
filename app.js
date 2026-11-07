@@ -31,20 +31,69 @@
   const arEventTitle = document.createElement('strong');
   const arEventCopy = document.createElement('small');
   arEvent.append(arEventTitle, arEventCopy); stage.append(arEvent);
-  $('page-mirror').querySelector('.page-heading p').textContent = '打开前置摄像头，把脸和食指放进画面。食指靠近脸颊、额头等区域并短暂停留时，局部会出现对应的机制动画。识别的是画面位置接近，单个摄像头不能确认真实触碰或检测皮肤内部。';
+  $('page-mirror').querySelector('.page-heading p').textContent = '手指靠近脸颊，或轻点画面，探索成分作用。';
   stage.querySelector('.camera-caption').textContent = '把脸和食指放进画面 · 也可点选区域体验';
   stage.parentElement.querySelector('.camera-foot > span').textContent = '◈ 通过面部与手指关键点判断画面位置；动画是产品机制示意。';
-  $('page-products').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 返回首页</button><span class="journey-progress">01 / 选择产品</span></div>');
-  $('page-mirror').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="products">← 更换产品</button><span class="journey-progress">02 / 了解作用</span><button type="button" data-journey="today">记录护理 →</button></div><div class="journey-current">正在了解：<strong class="journey-product"></strong> · 点选面部区域也可体验，或直接记录</div>');
-  $('page-mirror').querySelector('.mirror-layout').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="today">继续，记录护理 ↗</button><button type="button" class="journey-link" data-journey="products">更换产品</button></div>');
-  $('page-today').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="mirror">← 返回 AR</button><span class="journey-progress">03 / 留下记录</span><button type="button" data-journey="growth">跳过记录 →</button></div><div class="journey-current">本次选择：<strong class="journey-product"></strong> · 按实际使用情况记录</div>');
-  $('page-today').querySelector('.note-bar').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="growth">查看我的成长图谱 ↗</button><button type="button" class="journey-link" data-journey="products">选择其他产品</button></div>');
-  $('page-growth').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 回到首页</button><span class="journey-progress">04 / 成长图谱</span><button type="button" data-journey="products">选择产品 →</button></div>');
+  $('page-products').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 首页</button><span class="journey-progress">01 <i></i> 02 <i></i> 03</span></div>');
+  $('page-mirror').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="products">← 产品</button><span class="journey-progress">第 2 步 / 共 3 步</span><button type="button" data-journey="today">去记录 →</button></div>');
+  $('page-mirror').querySelector('.page-heading').insertAdjacentHTML('afterend', '<div class="journey-current">本次护理 <strong class="journey-product"></strong><span>作用示意</span></div>');
+  $('page-mirror').querySelector('.mirror-layout').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="today">下一步，记录感受 ↗</button><button type="button" class="journey-link" data-journey="products">更换产品</button></div>');
+  $('page-today').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="mirror">← AR 护理</button><span class="journey-progress">第 3 步 / 共 3 步</span><button type="button" data-journey="growth">稍后记录 →</button></div><div class="journey-current">本次护理 <strong class="journey-product"></strong></div>');
+  $('page-today').querySelector('.note-bar').insertAdjacentHTML('afterend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="growth">查看护理日记 ↗</button><button type="button" class="journey-link" data-journey="products">再选一款</button></div>');
+  $('page-growth').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 首页</button><span class="journey-progress">每一天，都算数</span><button type="button" data-journey="products">开始护理 →</button></div>');
   $('page-growth').insertAdjacentHTML('beforeend', '<div class="journey-actions"><button type="button" class="primary-btn" data-journey="products">再选一款产品 ↗</button><button type="button" class="journey-link" data-journey="welcome">结束，回到首页</button></div>');
   document.querySelector('.three-grid')?.previousElementSibling?.classList.add('feature-heading');
-  $('page-products').querySelector('h1').innerHTML = '今天的护理，<br><em>从选择产品开始。</em>';
-  $('page-products').querySelector('.page-heading p').innerHTML = '在 <strong id="catalog-total">16</strong> 款谷雨产品中找到你正在使用的产品，点击按钮继续了解护理作用。';
+  $('page-products').querySelector('h1').textContent = '今天，用哪一款？';
+  $('page-products').querySelector('.page-heading p').innerHTML = '选择手边的产品，一起看看它如何起作用。<span class="catalog-size">已收录 <strong id="catalog-total">16</strong> 款谷雨产品</span>';
+  $('mirror-title').textContent = '看懂这一次护理';
+  $('growth-title').textContent = '你的护理日记';
+  $('page-growth').querySelector('.page-heading p').textContent = '每一次记录，都是照顾自己的痕迹。';
   $('today-focus').querySelector('h2').textContent = '记录今天的护理';
+  $('welcome-date').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date());
+
+  // The drag gesture has an ordinary button alternative for touch and keyboard access.
+  const slideTrack = $('slide-entry');
+  const slideThumb = $('slide-thumb');
+  let slideDrag = null;
+  let suppressSlideClick = false;
+  function resetSlide() {
+    slideDrag = null;
+    slideTrack.classList.remove('is-dragging');
+    slideTrack.style.setProperty('--slide-x', '0px');
+    $('slide-label').textContent = '向右滑动，开始护理';
+  }
+  slideThumb.addEventListener('pointerdown', (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    suppressSlideClick = false;
+    slideDrag = { pointer: event.pointerId, start: event.clientX, moved: false, progress: 0 };
+    slideThumb.setPointerCapture(event.pointerId);
+    slideTrack.classList.add('is-dragging');
+  });
+  slideThumb.addEventListener('pointermove', (event) => {
+    if (!slideDrag || slideDrag.pointer !== event.pointerId) return;
+    const distance = event.clientX - slideDrag.start;
+    if (Math.abs(distance) > 6) slideDrag.moved = true;
+    const travel = Math.max(1, slideTrack.clientWidth - slideThumb.offsetWidth - 12);
+    const offset = Math.max(0, Math.min(travel, distance));
+    slideDrag.progress = offset / travel;
+    slideTrack.style.setProperty('--slide-x', `${offset}px`);
+    $('slide-label').textContent = slideDrag.progress >= .85 ? '松开，开始护理' : '向右滑动，开始护理';
+  });
+  slideThumb.addEventListener('pointerup', (event) => {
+    if (!slideDrag || slideDrag.pointer !== event.pointerId) return;
+    const complete = slideDrag.progress >= .85;
+    suppressSlideClick = slideDrag.moved;
+    resetSlide();
+    if (slideThumb.hasPointerCapture(event.pointerId)) slideThumb.releasePointerCapture(event.pointerId);
+    if (complete) showTab('products');
+  });
+  const cancelSlide = () => { if (slideDrag) { suppressSlideClick = true; resetSlide(); } };
+  slideThumb.addEventListener('pointercancel', cancelSlide);
+  slideThumb.addEventListener('lostpointercapture', cancelSlide);
+  slideThumb.addEventListener('click', (event) => {
+    if (event.detail === 0 || !suppressSlideClick) { resetSlide(); showTab('products'); }
+    suppressSlideClick = false;
+  });
 
   try {
     const stored = JSON.parse(localStorage.getItem(STORE));
@@ -121,7 +170,7 @@
     const query = $('catalog-search').value.trim().toLocaleLowerCase('zh-CN');
     const filtered = products.filter((product) => (catalogFamily === 'all' || product.family === catalogFamily) &&
       (!query || [product.name, product.short, product.family, product.type, product.feature, ...product.ingredients, ...product.effects].join(' ').toLocaleLowerCase('zh-CN').includes(query)));
-    $('catalog-count').textContent = `找到 ${filtered.length} 款 · 核心成分非完整配方`;
+    $('catalog-count').textContent = `共 ${filtered.length} 款产品`;
     const grid = $('catalog-grid'); grid.replaceChildren();
     if (!filtered.length) {
       const empty = document.createElement('div'); empty.className = 'catalog-empty';
@@ -141,17 +190,18 @@
       const kind = document.createElement('span'); kind.className = 'catalog-kind'; kind.textContent = product.type; top.append(family, kind);
       const title = document.createElement('h3'); title.textContent = product.short;
       const fullName = document.createElement('small'); fullName.textContent = product.name; title.append(fullName);
-      const feature = document.createElement('p'); feature.textContent = product.feature;
+      const feature = document.createElement('p'); feature.className = 'catalog-benefit'; feature.textContent = product.effects.slice(0, 2).join(' · ');
       const ingredientWrap = document.createElement('div'); ingredientWrap.className = 'catalog-chips'; ingredientWrap.replaceChildren(...product.ingredients.map(makeChip));
       const ingredientLabel = document.createElement('div'); ingredientLabel.className = 'catalog-label'; ingredientLabel.textContent = '官网公开核心成分';
       const effectWrap = document.createElement('div'); effectWrap.className = 'catalog-chips effects'; effectWrap.replaceChildren(...product.effects.map(makeChip));
       const effectLabel = document.createElement('div'); effectLabel.className = 'catalog-label'; effectLabel.textContent = '官网公开功效';
-      const ingredients = document.createElement('div'); ingredients.append(ingredientLabel, ingredientWrap);
-      const effects = document.createElement('div'); effects.append(effectLabel, effectWrap);
+      const ingredients = document.createElement('div'); ingredients.className = 'catalog-info'; ingredients.append(ingredientLabel, ingredientWrap);
+      const effects = document.createElement('div'); effects.className = 'catalog-info'; effects.append(effectLabel, effectWrap);
       const details = document.createElement('details'); details.className = 'catalog-details';
-      const summary = document.createElement('summary'); summary.textContent = '查看用法、机制和证据';
+      const summary = document.createElement('summary'); summary.textContent = '成分与功效';
       const detailBody = document.createElement('div'); detailBody.className = 'catalog-detail-body';
-      for (const [label, value] of [['使用方式', product.use], ['作用解释', product.mechanism], ['公开依据', product.evidence]]) {
+      detailBody.append(ingredients, effects);
+      for (const [label, value] of [['产品特点', product.feature], ['使用方式', product.use], ['作用解释', product.mechanism], ['公开依据', product.evidence]]) {
         const line = document.createElement('p'); const strong = document.createElement('strong'); strong.textContent = `${label}：`;
         line.append(strong, document.createTextNode(value)); detailBody.append(line);
       }
@@ -159,8 +209,9 @@
       details.append(summary, detailBody);
       const actions = document.createElement('div'); actions.className = 'catalog-card-actions';
       const select = document.createElement('button'); select.className = 'catalog-select'; select.type = 'button'; select.dataset.selectProduct = product.id;
-      select.textContent = '选择并进入 AR ↗';
-      actions.append(select); card.append(figure, top, title, feature, ingredients, effects, details, actions); grid.append(card);
+      select.textContent = '用这一款 ↗';
+      select.setAttribute('aria-label', `选择${product.short}，进入 AR 护理`);
+      actions.append(select); card.append(figure, top, title, feature, details, actions); grid.append(card);
     }
   }
 
@@ -168,9 +219,17 @@
     activeTab = tab;
     document.body.classList.toggle('is-welcome', tab === 'welcome');
     document.querySelectorAll('.page').forEach((el) => el.classList.toggle('active', el.id === `page-${tab}`));
-    document.querySelectorAll('[data-tab]').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab && (el.classList.contains('nav-item') || el.closest('.mobile-nav'))));
+    const navTab = ['mirror', 'today'].includes(tab) ? 'products' : tab;
+    document.querySelectorAll('.mobile-nav [data-tab], .nav-item[data-tab]').forEach((el) => {
+      const current = el.dataset.tab === navTab;
+      el.classList.toggle('active', current);
+      if (current) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+    });
+    if (tab === 'welcome') resetSlide();
     if (tab !== 'mirror') stopMirror();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    const heading = $(`page-${tab}`).querySelector('h1, h2');
+    if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
     if (scrollId) setTimeout(() => $(scrollId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
   }
 
