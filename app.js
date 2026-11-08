@@ -118,6 +118,14 @@
     },
     today, navigate: (tab) => showTab(tab), refresh: () => render()
   });
+  const health = window.GUYU_HEALTH.create({
+    read: () => state.healthImport && typeof state.healthImport === 'object' ? state.healthImport : {},
+    write: (healthImport) => {
+      const next = { ...state, healthImport };
+      try { localStorage.setItem(STORE, JSON.stringify(next)); state = next; return true; } catch (_) { return false; }
+    },
+    manual: () => state.lifestyle || {}, care: () => state.records, today, refresh: () => render()
+  });
   function productById(id) { return products.find((product) => product.id === id); }
   function activeProduct() { return productById(state.selectedProductId) || productById('cream-pro') || products[0]; }
   function makeChip(value) { const chip = document.createElement('span'); chip.textContent = value; return chip; }
@@ -316,7 +324,7 @@
       }));
     }
 
-    const recent = recentDays(lifestyle.getRange()).reverse().map((d) => ({ d, r: record(dateKey(d)) })).filter(({ d, r }) => hasUse(r) || r.feeling || Number.isInteger(r.dry) || Number.isInteger(r.dull) || lifestyle.hasEntry(dateKey(d)));
+    const recent = recentDays(lifestyle.getRange()).reverse().map((d) => ({ d, r: record(dateKey(d)) })).filter(({ d, r }) => hasUse(r) || r.feeling || Number.isInteger(r.dry) || Number.isInteger(r.dull) || lifestyle.hasEntry(dateKey(d)) || health.hasDay(dateKey(d)));
     const timeline = $('timeline-list'); timeline.replaceChildren();
     if (!recent.length) {
       const empty = document.createElement('div'); empty.className = 'empty-timeline'; empty.textContent = '还没有记录。完成一次今日护理，或保存一次肤感，这里就会长出第一条时间线。'; timeline.append(empty);
@@ -335,7 +343,7 @@
       if (Number.isInteger(r.dry)) notes.push(`干燥 ${r.dry}/4`);
       if (Number.isInteger(r.dull)) notes.push(`暗沉 ${r.dull}/4`);
       const p = document.createElement('p'); p.textContent = notes.length ? notes.join(' · ') : hasUse(r) ? '已记录使用，尚未留下肤感。' : '当天尚无护理打卡。';
-      body.append(title, p); lifestyle.appendTimeline(body, dateKey(d)); row.append(when, body); timeline.append(row);
+      body.append(title, p); lifestyle.appendTimeline(body, dateKey(d)); health.appendTimeline(body, dateKey(d)); row.append(when, body); timeline.append(row);
     });
 
     const reflections = recent.filter(({ r }) => Number.isInteger(r.dry) && Number.isInteger(r.dull));
@@ -350,7 +358,7 @@
     }
   }
 
-  function render() { renderTodayProduct(); renderWhy(); renderRitual(); renderGrowth(); renderLab(); lifestyle.render(); }
+  function render() { renderTodayProduct(); renderWhy(); renderRitual(); renderGrowth(); renderLab(); lifestyle.render(); health.render(lifestyle.getRange()); }
 
   function renderStep() {
     const product = activeProduct();
