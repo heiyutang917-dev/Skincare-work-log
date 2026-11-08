@@ -106,10 +106,18 @@
 
   try {
     const stored = JSON.parse(localStorage.getItem(STORE));
-    if (stored && stored.records && typeof stored.records === 'object') state = stored;
+    if (stored && stored.records && typeof stored.records === 'object' && !Array.isArray(stored.records)) state = stored;
   } catch (_) { /* The prototype still works if browser storage is blocked. */ }
 
   function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (_) {} }
+  const lifestyle = window.GUYU_LIFESTYLE.create({
+    readAll: () => state.lifestyle && typeof state.lifestyle === 'object' && !Array.isArray(state.lifestyle) ? state.lifestyle : {},
+    writeAll: (entries) => {
+      const next = { ...state, lifestyle: entries };
+      try { localStorage.setItem(STORE, JSON.stringify(next)); state = next; return true; } catch (_) { return false; }
+    },
+    today, navigate: (tab) => showTab(tab), refresh: () => render()
+  });
   function productById(id) { return products.find((product) => product.id === id); }
   function activeProduct() { return productById(state.selectedProductId) || productById('cream-pro') || products[0]; }
   function makeChip(value) { const chip = document.createElement('span'); chip.textContent = value; return chip; }
@@ -232,7 +240,7 @@
     activeTab = tab;
     document.body.classList.toggle('is-welcome', tab === 'welcome');
     document.querySelectorAll('.page').forEach((el) => el.classList.toggle('active', el.id === `page-${tab}`));
-    const navTab = ['mirror', 'today'].includes(tab) ? 'products' : tab;
+    const navTab = tab === 'lifestyle' ? 'growth' : ['mirror', 'today'].includes(tab) ? 'products' : tab;
     document.querySelectorAll('.mobile-nav [data-tab], .nav-item[data-tab]').forEach((el) => {
       const current = el.dataset.tab === navTab;
       el.classList.toggle('active', current);
@@ -308,7 +316,7 @@
       }));
     }
 
-    const recent = recentDays(28).reverse().map((d) => ({ d, r: record(dateKey(d)) })).filter(({ r }) => hasUse(r) || r.feeling || Number.isInteger(r.dry) || Number.isInteger(r.dull));
+    const recent = recentDays(lifestyle.getRange()).reverse().map((d) => ({ d, r: record(dateKey(d)) })).filter(({ d, r }) => hasUse(r) || r.feeling || Number.isInteger(r.dry) || Number.isInteger(r.dull) || lifestyle.hasEntry(dateKey(d)));
     const timeline = $('timeline-list'); timeline.replaceChildren();
     if (!recent.length) {
       const empty = document.createElement('div'); empty.className = 'empty-timeline'; empty.textContent = '还没有记录。完成一次今日护理，或保存一次肤感，这里就会长出第一条时间线。'; timeline.append(empty);
@@ -317,7 +325,7 @@
       const when = document.createElement('div'); when.className = 'timeline-date'; when.textContent = dateLabel(d);
       const weekday = document.createElement('small'); weekday.textContent = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' }).format(d); when.append(weekday);
       const body = document.createElement('div'); body.className = 'timeline-text';
-      const title = document.createElement('strong'); title.textContent = hasUse(r) ? `${r.am ? '晨间' : ''}${r.am && r.pm ? ' + ' : ''}${r.pm ? '夜间' : ''}护理` : '今日肤感';
+      const title = document.createElement('strong'); title.textContent = hasUse(r) ? `${r.am ? '晨间' : ''}${r.am && r.pm ? ' + ' : ''}${r.pm ? '夜间' : ''}护理` : r.feeling || Number.isInteger(r.dry) || Number.isInteger(r.dull) ? '护理时的肤感' : '生活记录';
       const notes = [];
       if (r.am || r.pm) {
         const usedProducts = [...new Set([r.am && r.amProductId, r.pm && r.pmProductId].filter(Boolean))].map((id) => productById(id)?.short).filter(Boolean);
@@ -326,8 +334,8 @@
       if (r.feeling) notes.push({ comfortable: '状态平稳', dry: '有些干燥', irritated: '刺痛 / 明显泛红' }[r.feeling]);
       if (Number.isInteger(r.dry)) notes.push(`干燥 ${r.dry}/4`);
       if (Number.isInteger(r.dull)) notes.push(`暗沉 ${r.dull}/4`);
-      const p = document.createElement('p'); p.textContent = notes.length ? notes.join(' · ') : '已记录使用，尚未留下肤感。';
-      body.append(title, p); row.append(when, body); timeline.append(row);
+      const p = document.createElement('p'); p.textContent = notes.length ? notes.join(' · ') : hasUse(r) ? '已记录使用，尚未留下肤感。' : '当天尚无护理打卡。';
+      body.append(title, p); lifestyle.appendTimeline(body, dateKey(d)); row.append(when, body); timeline.append(row);
     });
 
     const reflections = recent.filter(({ r }) => Number.isInteger(r.dry) && Number.isInteger(r.dull));
@@ -342,7 +350,7 @@
     }
   }
 
-  function render() { renderTodayProduct(); renderWhy(); renderRitual(); renderGrowth(); renderLab(); }
+  function render() { renderTodayProduct(); renderWhy(); renderRitual(); renderGrowth(); renderLab(); lifestyle.render(); }
 
   function renderStep() {
     const product = activeProduct();
@@ -505,4 +513,5 @@
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopMirror(); if (!$('scan-modal').hidden) closeScanner(); } });
   renderStep(); render(); renderCatalog();
+  window.GUYU_LIFESTYLE.applyTypography();
 })();
