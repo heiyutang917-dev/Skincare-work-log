@@ -49,6 +49,7 @@
     constructor({ panel, stage, onStep }) {
       this.panel = panel; this.stage = stage; this.onStep = onStep;
       this.product = null; this.step = 0; this.playing = false; this.timer = null; this.frame = null; this.anchor = null;
+      this.autoShown = new Set();
       this.reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
       panel.innerHTML = `<div class="mechanism-heading"><div><div class="panel-eyebrow">配方原理 · 分步了解</div><h2 id="mechanism-title"></h2></div><span class="mechanism-counter" id="mechanism-counter">01 / 03</span></div>
         <div class="mechanism-scene"><span class="mechanism-label">皮肤分层示意 · 非检测</span>${scene()}<div class="skin-layer-labels"><span>皮肤表面</span><span>角质层</span><span>更深层结构示意</span></div><span class="mechanism-legend"></span></div>
@@ -118,11 +119,22 @@
     }
     pause() { clearTimeout(this.timer); this.timer = null; this.playing = false; if (this.product) this.syncPlayback(); }
     trigger(point) {
+      if (this.autoShown.has(this.product.id)) {
+        if (point?.camera) this.track(point);
+        else { this.loupe.hidden = false; this.pin.hidden = false; this.anchor = null; this.place(point || { x: this.stage.clientWidth * .29, y: this.stage.clientHeight * .58 }); }
+        return false;
+      }
+      this.autoShown.add(this.product.id);
       this.pause(); this.onStep(1);
       this.loupe.hidden = false; this.pin.hidden = false;
       this.anchor = point?.anchor || null;
       this.place(point || { x: this.stage.clientWidth * .29, y: this.stage.clientHeight * .58 });
       if (!this.reduced?.matches) { this.playing = true; this.syncPlayback(); this.schedule(); }
+      return true;
+    }
+    track(point) {
+      if (!point?.anchor || !this.anchor || !this.frame) return;
+      this.anchor = point.anchor; this.loupe.hidden = false; this.pin.hidden = false; this.place(point);
     }
     place(point) {
       const w = this.stage.clientWidth, h = this.stage.clientHeight;
@@ -131,7 +143,7 @@
       const lw = Math.min(156, w - 24), lh = 130;
       this.loupe.style.width = `${lw}px`;
       this.loupe.style.left = `${Math.max(12, Math.min(w - lw - 12, x < w / 2 ? x + 24 : x - lw - 24))}px`;
-      this.loupe.style.top = `${Math.max(12, Math.min(h - lh - 12, y - lh / 2))}px`;
+      this.loupe.style.top = `${Math.max(12, Math.min(h - lh - 47, y - lh / 2))}px`;
     }
     follow(frame) {
       this.frame = frame;

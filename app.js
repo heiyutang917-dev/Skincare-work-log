@@ -35,12 +35,12 @@
     onStep: (step) => { selectedStep = step; renderStep(); }
   });
   stage.parentElement.querySelector('.camera-top > span').innerHTML = '<span class="camera-indicator"></span> <span id="camera-mode">点选体验</span>';
-  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 点「开启摄像头」并允许权限。<br>② 面部居中，让脸和食指同时入镜。<br>③ 食指靠近脸颊或额头，停留片刻；移开后可再次触发。<br>手机只判断画面位置接近，不能确认实际触碰。点选区域随时可用。</div></div>');
+  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 开启摄像头，让面部与食指进入画面<br>② 抬起食指，看到光点跟随指尖<br>③ 靠近脸颊或额头，光圈从当前位置展开<br>同一款产品只自动播放一次原理，移动时继续显示涟漪<br>手机判断画面位置接近，无法确认真实触碰</div></div>');
   $('camera-help').addEventListener('click', () => {
     const expanded = $('camera-help').getAttribute('aria-expanded') !== 'true';
     $('camera-help').setAttribute('aria-expanded', String(expanded)); $('camera-help-copy').hidden = !expanded;
   });
-  $('page-mirror').querySelector('.page-heading p').textContent = '手指靠近脸颊，或轻点画面，探索成分作用。';
+  $('page-mirror').querySelector('.page-heading p').textContent = '让光点跟随指尖，靠近肌肤，看见护理的作用';
   stage.querySelector('.camera-caption').textContent = '点选脸颊或额头 · 先体验配方示意';
   stage.parentElement.querySelector('.camera-foot > span').textContent = '◈ 通过面部与手指关键点判断画面位置；动画是产品机制示意。';
   $('page-products').insertAdjacentHTML('afterbegin', '<div class="journey-bar"><button type="button" data-journey="welcome">← 首页</button><span class="journey-progress">01 <i></i> 02 <i></i> 03</span></div>');
@@ -355,12 +355,19 @@
   function renderStep() {
     const product = activeProduct();
     skin.render(product, selectedStep);
-    $('camera-guidance').textContent = product.area === 'eye' ? '眼周产品：点选查看原理，无需触碰眼周' : mirrorStream ? '面部居中，让食指靠近脸颊并停留片刻' : '先点一个区域，看看作用示意';
+    $('camera-guidance').textContent = product.area === 'eye' ? '眼周产品：点选查看原理，无需触碰眼周' : mirrorStream ? '光点跟随食指，首次靠近时展开原理' : '先轻点一个区域，原理只自动展开一次';
     document.querySelectorAll('[data-zone]').forEach((b) => b.classList.toggle('active', b.dataset.zone === selectedZone));
   }
 
   function triggerMechanism(zone, point) {
-    selectedZone = zone; skin.trigger(point);
+    selectedZone = zone;
+    if (!point?.camera) {
+      const ripple = document.createElement('div'); ripple.className = 'ar-touch'; ripple.setAttribute('aria-hidden', 'true');
+      ripple.style.left = `${point?.x ?? stage.clientWidth * .29}px`; ripple.style.top = `${point?.y ?? stage.clientHeight * .58}px`; stage.append(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+      stage.querySelectorAll('.ar-touch').forEach((el, index, list) => { if (index < list.length - 6) el.remove(); });
+    }
+    if (!skin.trigger(point)) return;
     const product = activeProduct();
     const zoneName = ({ cheek: '脸颊', forehead: '额头', chin: '下巴', center: '面部中央' })[zone] || '面部';
     arEventTitle.textContent = `${zoneName} · ${window.GUYU_SKIN.profile(product).title}`;
@@ -390,11 +397,12 @@
       $('camera-mode').textContent = '准备手势识别';
       renderStep();
       $('camera-message').textContent = '正在加载面部与手部识别模型，首次打开需要片刻…';
-      const { startARMirror } = await import('./ar-mirror.mjs?v=ar2');
+      const { startARMirror } = await import('./ar-mirror.mjs?v=finger1');
       if (run !== cameraRun) return;
       const session = await startARMirror({ video, stage, canvas: overlay,
         onApproach: (zone, point) => { if (run === cameraRun) triggerMechanism(zone, point); },
         onFace: (bounds) => { if (run === cameraRun) skin.follow(bounds); },
+        onPointer: (point) => { if (run === cameraRun && point) skin.track(point); },
         onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); $('camera-mode').textContent = '相机 · 点选可用'; skin.clearAnchor(); } },
         onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
       });
@@ -413,6 +421,7 @@
     mirrorStream?.getTracks().forEach((track) => track.stop()); mirrorStream = null;
     $('camera-video').srcObject = null; stage.classList.remove('camera-on', 'ar-ready');
     overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+    stage.querySelectorAll('.ar-touch').forEach(el => el.remove());
     $('camera-toggle').disabled = false; $('camera-toggle').textContent = '开启摄像头';
     $('camera-mode').textContent = '点选体验';
     $('camera-message').textContent = '相机未开启；点选体验可用。画面仅在本页处理。';

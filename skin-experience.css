@@ -57,9 +57,9 @@
 .skin-loupe .skin-svg{width:150px;height:93px;margin:20px auto 0}
 .loupe-caption{position:absolute;bottom:9px;left:10px;right:6px;font-size:9px;white-space:nowrap;color:#607a66}
 .skin-pin{position:absolute;z-index:3;width:20px;height:20px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid white;box-shadow:0 0 0 7px #ffffff3d,0 0 20px #ffffffa8;background:var(--skin-accent);pointer-events:none}
-#page-mirror .ar-event{left:12px;right:12px;bottom:12px;padding:9px 12px;border-radius:15px;background:#284b3ae6}
+#page-mirror .ar-event{left:12px;right:auto;bottom:10px;max-width:calc(100% - 24px);padding:6px 12px;border-radius:999px;background:#284b3ac9}
 #page-mirror .ar-event strong{font:500 12px/1.6 inherit;font-family:inherit;font-size:12px}
-#page-mirror .ar-event small{font-size:10px;line-height:1.7}
+#page-mirror .ar-event small{display:none}
 #page-mirror .camera-stage .face-guide{transition:none}
 .source-pending{border-left:2px solid #9eac96;padding:9px;background:#edf1e8;color:#687d63}
 @keyframes skin-droplet{0%,100%{transform:translateY(-12px);opacity:.35}55%{transform:translateY(17px);opacity:1}}
