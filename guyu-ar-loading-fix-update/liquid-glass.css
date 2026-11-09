@@ -1,0 +1,69 @@
+/* Web material inspired by Liquid Glass; content remains a quiet reading surface. */
+:root{
+  --lg-ink:#274437;--lg-muted:#586f61;
+  --lg-fill:linear-gradient(140deg,#ffffffe0 0%,#ffffff66 42%,#e6efe85e 100%);
+  --lg-rim:#ffffffd9;
+  --lg-shadow:0 8px 24px #183c2c12,0 1px 4px #183c2c12,inset 0 1px 1px #ffffffed,inset 0 -1px 1px #4d715c20;
+  --lg-blur:blur(20px) saturate(1.5);
+}
+body{background-color:#eaf0eb;background-image:radial-gradient(ellipse at 102% 25%,#9bbfa54a 0%,#9bbfa500 48%),radial-gradient(ellipse at -12% 79%,#d5dfbd6b 0%,#d5dfbd00 47%),linear-gradient(126deg,#f2f5ef 0%,#e5eee7 49%,#f1f4ed 100%);background-attachment:fixed;color:var(--lg-ink)}
+.glass-local{position:relative}
+.guyu-glass{isolation:isolate;border:1px solid var(--lg-rim);background:var(--lg-fill);color:var(--lg-ink);box-shadow:var(--lg-shadow);-webkit-backdrop-filter:var(--lg-blur);backdrop-filter:var(--lg-blur);-webkit-tap-highlight-color:transparent}
+.guyu-glass::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at var(--glass-x,15%) var(--glass-y,0%),#ffffffc2 0%,#ffffff24 42%,#ffffff00 70%),linear-gradient(163deg,#ffffff47 0%,#ffffff00 35%,#769b8515 67%,#ffffff80 100%);opacity:.8;transition:opacity .2s ease}
+.guyu-glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;box-shadow:inset 1px 1px 0 #ffffffb3,inset -1px -1px 1px #ffffff85,inset 0 0 0 1px #2349320b}
+button.guyu-glass{transition:scale .3s cubic-bezier(.2,.8,.2,1.2),box-shadow .25s,background .25s;color:var(--lg-ink)}
+button.guyu-glass:hover{filter:none}
+button.guyu-glass.glass-down{scale:.965;box-shadow:0 3px 8px #14372212,inset 0 1px 2px #ffffffbd,inset 0 0 15px #ffffff52}
+button.guyu-glass.glass-down::before{opacity:1}
+.guyu-glass:focus-visible{outline:3px solid #407559;outline-offset:4px}
+/* One tinted glass treatment identifies the main action. */
+:is(.primary-btn,.catalog-select,.camera-toggle,.slide-thumb).guyu-glass{--lg-fill:linear-gradient(145deg,#38634fe8,#1f4938ed);--lg-rim:#d7ecddbd;color:#fff;box-shadow:0 6px 17px #214b3624,inset 0 1px 1px #ffffffa3,inset 0 -1px 1px #102e2638}
+:is(.primary-btn,.catalog-select,.camera-toggle,.slide-thumb).guyu-glass::before{background:radial-gradient(ellipse at var(--glass-x,12%) var(--glass-y,0%),#f2ffed6e,#c2e0ca0d 58%,#ffffff00 76%),linear-gradient(160deg,#ffffff16,#ffffff00 57%,#c5e3d223);opacity:.8}
+:is(.primary-btn,.catalog-select,.camera-toggle,.slide-thumb).guyu-glass::after{box-shadow:inset 1px 1px 0 #ffffff8c,inset -1px -1px 1px #c8e9d433}
+:is(.primary-btn,.catalog-select,.camera-toggle).guyu-glass:active{transform:none}
+/* The entry lens follows the existing drag position and retains pointer capture. */
+.slide-entry.guyu-glass{--lg-fill:linear-gradient(125deg,#ffffff9e,#ffffff38 55%,#ffffff6e);--lg-blur:blur(22px) saturate(1.7);box-shadow:0 10px 28px #294b371a,0 1px 3px #22463014,inset 0 2px 2px #fffffff2,inset 0 -1px 2px #628a712b}
+.slide-entry .slide-fill{background:linear-gradient(90deg,#b9d1c064,#c7dfca24);border-radius:inherit}
+.slide-entry .slide-thumb{border-width:1.5px;box-shadow:0 3px 10px #1d4c3433,0 0 0 3px #ffffff30,inset 0 2px 2px #ffffff94}
+.slide-entry .slide-label{color:#365c46;font-size:12px;text-shadow:0 1px 0 #ffffffb3}.slide-entry .slide-end{color:#658a70}
+.welcome-history.guyu-glass{font-size:11px;color:#365b46}
+.welcome-ritual{background:linear-gradient(145deg,#fafff9db,#f7fbf3b8);border-color:#ffffffd9;box-shadow:0 7px 22px #26453006,inset 0 1px 1px #fff}
+/* The navigation is a single glass surface with a fluid selection fill. */
+.mobile-nav.guyu-glass{width:270px;padding:6px;gap:4px;--lg-fill:linear-gradient(150deg,#ffffffae,#edf5eb66 70%,#ffffff85);--lg-blur:blur(26px) saturate(1.8);box-shadow:0 12px 32px #1c3e2b24,0 2px 5px #1c3e2b12,inset 0 1.5px 1px #fffffff0,inset 0 -1px 1px #4c705e38}
+.mobile-nav button{position:relative;z-index:1;flex:1;width:auto;min-height:54px;gap:4px;color:#647d6c;transition:color .25s,scale .25s;transform:none}
+.mobile-nav button.active{background:transparent;color:#1e5038;box-shadow:none;font-weight:600}
+.mobile-nav button:active{scale:.94;transform:none}.mobile-nav button svg{width:21px;height:21px}.mobile-nav button span{font-size:10px}
+.glass-nav-lens{position:absolute;top:6px;left:0;height:calc(100% - 12px);width:var(--nav-lens-width,82px);transform:translateX(var(--nav-lens-left,6px));background:linear-gradient(145deg,#ffffffc9,#d6e6d5a6);border:1px solid #ffffffd9;border-radius:999px;box-shadow:0 2px 6px #2d55361c,inset 0 1px 0 #fff,inset 0 -1px 1px #4b755629;pointer-events:none;z-index:0;transition:transform .38s cubic-bezier(.2,.8,.22,1),width .38s cubic-bezier(.2,.8,.22,1)}
+.journey-bar button.guyu-glass,.life-button.guyu-glass,.life-round.guyu-glass{color:#335d45}
+.catalog-filters .guyu-glass{--lg-fill:linear-gradient(145deg,#ffffffe0,#f6fbef8c);box-shadow:0 3px 9px #294b3608,inset 0 1px 0 #fff;--lg-blur:blur(12px) saturate(1.25)}
+:is(.catalog-filters button.active,.choice-row button.selected,.camera-zones button.active,.rating-options button.selected,.life-feelings button[aria-pressed=true]).guyu-glass{--lg-fill:linear-gradient(145deg,#d3e5d3dc,#bdd6c7cf);background:var(--lg-fill);color:#204f35;border-color:#f5fff1;box-shadow:0 2px 7px #335d3b14,inset 0 1px 0 #fff}
+.catalog-card.selected .catalog-select.guyu-glass{--lg-fill:linear-gradient(145deg,#dbeadbeb,#c6dccde0);background:var(--lg-fill);color:#244f38}
+.mechanism-controls .guyu-glass{font-size:11px;--lg-blur:blur(12px) saturate(1.2)}
+.mechanism-controls #mechanism-play.guyu-glass{--lg-fill:linear-gradient(145deg,#38634fe8,#1f4938ed);background:var(--lg-fill);color:#fff;border-color:#d3e4d4c7}
+.mechanism-controls #mechanism-replay{box-shadow:none;background:transparent;border-color:transparent}
+/* Content surfaces use a restrained, readable standard material. */
+:is(.card,.catalog-card,.growth-main-card,.reflection-card,.timeline-card,.life-form,.life-review,.evidence-card,.mirror-panel){background:linear-gradient(140deg,#fbfdf7f0,#f6faf2e8);border:1px solid #ffffffe8;box-shadow:0 6px 24px #2d4b3506;backdrop-filter:none;-webkit-backdrop-filter:none}
+.catalog-card.selected{border-color:#b6ccb7;box-shadow:inset 0 0 0 1px #bdcebd,0 6px 24px #2d4b3506}
+.catalog-search{background:#f9fcf5d9;border-color:#ffffffed;box-shadow:inset 0 1px 1px #fff,0 4px 12px #28463108}
+.product-text p,.why-card p,.step-copy p,.timeline-text p,.page-heading p{color:#5e7465}
+.skin-loupe.guyu-glass{--lg-fill:linear-gradient(135deg,#fcfff3eb,#e7f2e4d6);--lg-blur:blur(16px) saturate(1.3);color:var(--skin-accent);box-shadow:0 9px 28px #15372133,inset 0 1px 1px #fff}
+.life-modal{background:#2440333d;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+.life-modal>section{background:linear-gradient(145deg,#fafff5f5,#ecf3e9f0);border:1px solid #ffffffed;box-shadow:0 20px 70px #153c2c2e,inset 0 1px 1px white}
+.life-modal-close.guyu-glass{background:var(--lg-fill);color:#42664d}
+.life-segment{background:#dce8dd9c;box-shadow:inset 0 1px 2px #426b4910}.life-segment button[aria-pressed=true]{background:linear-gradient(145deg,#fffffff5,#e9f3e5c9);box-shadow:0 2px 7px #294d351a,inset 0 1px 1px #fff}
+@media(max-width:650px){:root{--lg-blur:blur(16px) saturate(1.45)}.mobile-nav.guyu-glass{--lg-blur:blur(22px) saturate(1.65)}}
+@media(max-width:360px){.mobile-nav.guyu-glass{width:254px}.slide-entry .slide-label{font-size:10px}}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .guyu-glass{background:#f4f8f0}.mobile-nav.guyu-glass,.slide-entry.guyu-glass{background:#eef5eb}
+  :is(.primary-btn,.catalog-select,.camera-toggle,.slide-thumb,#mechanism-play).guyu-glass{background:#28543e;color:#fff}
+}
+@media(prefers-reduced-transparency:reduce),(prefers-contrast:more){
+  .guyu-glass{background:#f4f8ee;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 3px 9px #264b351a;border-color:#738f7b}
+  .guyu-glass::before,.guyu-glass::after{display:none}
+  :is(.primary-btn,.catalog-select,.camera-toggle,.slide-thumb,#mechanism-play).guyu-glass{background:#28543e;color:#fff}
+  .glass-nav-lens{background:#d5e8d1;border-color:#6f8f74}.mobile-nav button{color:#385c43}.mobile-nav button.active{color:#173d27}
+  :is(.catalog-filters button.active,.choice-row button.selected,.camera-zones button.active,.rating-options button.selected,.life-feelings button[aria-pressed=true],.catalog-card.selected .catalog-select).guyu-glass{background:#d6e8d1;color:#204b2f}
+  .life-modal{background:#26433280;-webkit-backdrop-filter:none;backdrop-filter:none}.life-modal>section{background:#f4f8ee}
+}
+@media(prefers-reduced-motion:reduce){.guyu-glass,.guyu-glass::before,.glass-nav-lens,.mobile-nav button{transition:none!important}.guyu-glass.glass-down,.mobile-nav button:active{scale:1}}
+@media(forced-colors:active){.guyu-glass,.glass-nav-lens{background:Canvas;border:1px solid ButtonText;box-shadow:none;color:ButtonText;-webkit-backdrop-filter:none;backdrop-filter:none}.guyu-glass::before,.guyu-glass::after{display:none}.mobile-nav button.active{outline:2px solid Highlight;color:Highlight}.life-modal>section{background:Canvas;color:CanvasText}}

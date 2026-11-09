@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eaf0ed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="description" content="谷雨知肤生长图谱：看懂植萃作用，记录每日护理，回望有依据的变化。概念原型。">
+  <title>谷雨知肤生长图谱 · 概念原型</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="modal.css">
+  <link rel="stylesheet" href="ar.css?v=load2">
+  <link rel="stylesheet" href="catalog.css">
+  <link rel="stylesheet" href="journey.css?v=1">
+  <link rel="stylesheet" href="visual-refresh.css?v=minimal3">
+  <link rel="stylesheet" href="skin-experience.css?v=finger1">
+  <link rel="stylesheet" href="lifestyle.css?v=life1">
+  <link rel="stylesheet" href="liquid-glass.css?v=glass1">
+  <link rel="stylesheet" href="health-data.css?v=health1">
+  <script defer src="products.js"></script>
+  <script defer src="skin-experience.js?v=finger1"></script>
+  <script defer src="lifestyle.js?v=life1"></script>
+  <script defer src="vendor/fflate-0.8.3.js"></script>
+  <script defer src="health-data.js?v=health1"></script>
+  <script defer src="assistant-config.js?v=focus1"></script>
+  <script defer src="assistant.js?v=focus1"></script>
+  <script defer src="app.js?v=load2"></script>
+  <script defer src="liquid-glass.js?v=focus1"></script>
+  <link rel="stylesheet" href="focus-ui.css?v=focus1">
+</head>
+<body class="is-welcome">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-seal">谷<br>雨</div><div><strong>知肤生长图谱</strong><small>让植萃科学看得见</small></div></div>
+      <div class="sidebar-intro">从一次涂抹到一段变化，<br>让每天的护理都有迹可循。</div>
+      <nav class="desktop-nav" aria-label="主导航">
+        <button class="nav-item active" data-tab="today"><span>◌</span> 今日知肤</button>
+        <button class="nav-item" data-tab="products"><span>✦</span> 谷雨产品库</button>
+        <button class="nav-item" data-tab="mirror"><span>◎</span> AR 知肤镜</button>
+        <button class="nav-item" data-tab="growth"><span>◴</span> 生长图谱</button>
+      </nav>
+      <div class="sidebar-foot"><span class="live-dot"></span> 交互概念原型<br><small>非谷雨官方产品 · 数据仅存本机</small></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><span class="topbar-brand">谷雨 <i>·</i> 知肤生长图谱</span><span class="prototype-badge">概念原型</span></header>
+
+      <section class="page active welcome-page" id="page-welcome" aria-labelledby="welcome-title">
+        <div class="welcome-top">
+          <div class="welcome-brand"><strong>谷雨</strong><span>知肤<br><small>SKIN JOURNAL</small></span></div>
+          <button type="button" class="welcome-history" data-journey="growth" aria-label="查看我的护理记录"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v4H1M4 7a9 9 0 1 1-1 9M12 7v5l3 2"/></svg><span>我的记录</span></button>
+        </div>
+        <div class="welcome-body">
+          <div class="welcome-intro"><div class="welcome-kicker"><span></span> 每日知肤 · 从容开始</div><h1 id="welcome-title" tabindex="-1">给肌肤，<br><em>多一点了解。</em></h1><p>看懂每一次护理，<br>也看见自己慢慢坚持的日常。</p></div>
+          <div class="welcome-ritual"><div class="ritual-caption"><span>今天的护理</span><span id="welcome-date"></span></div><ol class="welcome-steps"><li><span>01</span><strong>选产品</strong></li><li><span>02</span><strong>看懂作用</strong></li><li><span>03</span><strong>记录感受</strong></li></ol></div>
+          <div class="welcome-entry"><div class="slide-entry" id="slide-entry"><span class="slide-fill" aria-hidden="true"></span><span id="slide-label" class="slide-label">向右滑动，开始护理</span><span class="slide-end" aria-hidden="true">››</span><button type="button" class="slide-thumb" id="slide-thumb" aria-label="开始今日护理：向右拖动，或轻点进入"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div><button type="button" class="welcome-start" data-journey="products">也可轻点进入 <span aria-hidden="true">↗</span></button></div>
+        </div>
+        <div class="welcome-foot"><span>GUYU · SKIN JOURNAL</span><span>独立概念设计</span></div>
+      </section>
+
+      <section class="page" id="page-today" aria-labelledby="today-title">
+        <div class="hero"><div class="hero-copy"><div class="eyebrow"><span class="eyebrow-line"></span><span id="date-label"></span> · 今日知肤</div><h1 id="today-title">每一次护理，<br><em>都值得被看见。</em></h1><p>看懂这款产品为什么用、如何发挥作用，再把真实的日常留在自己的肌肤图谱里。</p><button class="primary-btn" id="hero-explore">探索今日护理 <span>↗</span></button></div><div class="hero-art" aria-hidden="true"><div class="art-halo"></div><div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div><div class="art-center"><div class="art-leaf leaf-one"></div><div class="art-leaf leaf-two"></div><div class="art-drop"></div></div><div class="art-label art-label-one">理解成分</div><div class="art-label art-label-two">记录变化</div></div></div>
+
+        <div class="section-heading" id="today-focus"><div><div class="section-kicker">01 / TODAY</div><h2>今天的护理，从理解开始</h2></div><span class="subtle">一款产品 · 一段可追溯的解释</span></div>
+        <div class="today-grid">
+          <article class="card product-card"><div class="card-topline"><span class="tiny-pill" id="today-product-family">谷雨光感美白系列</span><span class="card-index">今日产品</span></div><div class="product-content"><div class="product-bottle" aria-hidden="true"><div class="bottle-lid"></div><div class="bottle-body"><span>谷雨</span><small id="today-bottle-name">光感美白<br>修护焕亮精华霜</small></div></div><div class="product-text"><h3 id="today-product-short">美白奶罐 Pro</h3><p id="today-product-name">光感美白修护焕亮精华霜</p><div class="product-tags" id="today-product-tags"><span>极光甘草</span><span>修护保湿</span><span>焕亮护理</span></div><button class="text-btn" id="open-lab">查看作用示意 <span>↗</span></button><button class="text-btn" id="open-library">从产品库更换 <span>↗</span></button><button class="text-btn scan-link" id="open-scanner">扫描官网产品二维码 <span>▣</span></button></div></div><div class="card-source">核心成分和功效据品牌公开资料整理 · <a id="today-product-source" href="https://guyu.com.cn/item/8.html" target="_blank" rel="noopener">查看来源 ↗</a></div></article>
+          <article class="card why-card"><div class="card-topline"><span class="tiny-pill green">今日知肤提示</span><span class="card-index">WHY TODAY</span></div><h3 id="why-title">今天，先照顾好肌肤的感受。</h3><p id="why-copy">规律护理是一个过程。先记录今天的肤感，再决定是否继续使用这款面霜。</p><div class="condition-label">你现在的肤感</div><div class="choice-row" role="group" aria-label="选择今天的肤感"><button data-feeling="comfortable">状态平稳</button><button data-feeling="dry">有些干燥</button><button data-feeling="irritated">刺痛 / 明显泛红</button></div><div class="why-bottom" id="why-bottom">你的选择会改变今日提示；这不是皮肤诊断。</div></article>
+        </div>
+
+        <div class="section-heading"><div><div class="section-kicker">02 / RITUAL</div><h2>把今天的护理，留在图谱里</h2></div><span class="subtle">记录行为，不虚构功效数值</span></div>
+        <div class="ritual-grid"><button class="ritual-card" id="log-am"><span class="ritual-symbol">☀</span><span class="ritual-main"><strong>晨间护理</strong><small>面霜之后，记得配合防晒</small></span><span class="ritual-status" id="status-am">标记完成 +</span></button><button class="ritual-card" id="log-pm"><span class="ritual-symbol">☾</span><span class="ritual-main"><strong>夜间护理</strong><small>洁面、精华后，轻柔涂抹</small></span><span class="ritual-status" id="status-pm">标记完成 +</span></button></div>
+        <div class="note-bar"><span>✦</span><p id="today-product-use">谷雨官网建议这款面霜早晚使用，白天配合防晒；首次使用可先局部测试。出现不适时停止使用。</p><a id="today-use-source" href="https://guyu.com.cn/item/8.html" target="_blank" rel="noopener">查看依据 ↗</a></div>
+
+        <div class="section-heading"><div><div class="section-kicker">03 / THREE WAYS TO SEE</div><h2>护肤过程中的三个“看见”</h2></div></div>
+        <div class="three-grid"><button class="feature-card" data-tab="mirror"><span class="feature-num">01</span><span class="feature-icon">◉</span><strong>当下，看懂作用</strong><small>在面部示意图中探索成分与皮肤结构。</small><span class="feature-arrow">↗</span></button><button class="feature-card" data-tab="today" data-scroll="today-focus"><span class="feature-num">02</span><span class="feature-icon">◌</span><strong>每天，看见护理</strong><small>每次使用留下时间与肤感，不让坚持变成空白。</small><span class="feature-arrow">↗</span></button><button class="feature-card" data-tab="growth"><span class="feature-num">03</span><span class="feature-icon">↗</span><strong>长期，看见变化</strong><small>把自评与使用记录并排，保留不确定性。</small><span class="feature-arrow">↗</span></button></div>
+      </section>
+
+      <section class="page" id="page-products" aria-labelledby="products-title">
+        <div class="page-heading"><div class="section-kicker">GUYU PRODUCT LIBRARY / 谷雨产品库</div><h1 id="products-title">每一款产品，<br><em>都从依据开始认识。</em></h1><p>收录谷雨官网“护肤系列”总目录当前列出的 <strong id="catalog-total">16</strong> 款。可以查找产品的特点、公开核心成分、功效及使用方式，再选为今日护理产品。</p></div>
+        <div class="catalog-summary"><span>资料核对：<span id="catalog-date">2026-10-27</span></span><a href="https://guyu.com.cn/product/1.html" target="_blank" rel="noopener">查看谷雨官网总目录 ↗</a></div>
+        <div class="catalog-toolbar"><label class="catalog-search"><span>⌕</span><input id="catalog-search" type="search" placeholder="搜索产品、成分或功效" autocomplete="off" aria-label="搜索谷雨产品"></label><div class="catalog-filters" id="catalog-filters" role="group" aria-label="筛选产品类别"><button class="active" data-family="all" aria-pressed="true">全部</button><button data-family="光感美白" aria-pressed="false">光感美白</button><button data-family="极光山参胶原" aria-pressed="false">极光山参胶原</button><button data-family="细胞泌素 HME" aria-pressed="false">细胞泌素 HME</button><button data-family="双效护理" aria-pressed="false">双效护理</button></div></div>
+        <div class="catalog-count" id="catalog-count" aria-live="polite"></div>
+        <div class="catalog-grid" id="catalog-grid"></div>
+        <div class="catalog-disclosure"><strong>如何阅读产品库</strong><p>这里列出的是官网公开的<strong>核心成分与功效宣称</strong>，并非完整 INCI 成分表，也不代表每个人使用后都会出现相同效果。完整成分、具体用法和备案信息以产品包装及官方记录为准；官网之外或历史渠道的产品可能未收入本次目录快照。</p></div>
+      </section>
+
+      <section class="page" id="page-mirror" aria-labelledby="mirror-title">
+        <div class="page-heading"><div class="section-kicker">AR SKIN MIRROR / 知肤镜</div><h1 id="mirror-title">在自己的脸上，<br><em>看懂护肤这件事。</em></h1><p>打开摄像头，把示意层叠加在脸颊位置。点选区域，探索角质层和谷雨产品的相关成分。此画面是科学解释，不代表手机看见了皮肤内部。</p></div>
+        <div class="mirror-layout"><div class="camera-card"><div class="camera-top"><span><span class="camera-indicator"></span> AR 知肤镜 · 示意模式</span><button id="camera-toggle" class="camera-toggle">开启摄像头</button></div><div class="camera-stage" id="camera-stage"><video id="camera-video" autoplay playsinline muted></video><div class="camera-placeholder"><div class="face-outline"><span class="eye eye-left"></span><span class="eye eye-right"></span><span class="nose"></span><span class="mouth"></span></div></div><div class="camera-tint"></div><div class="face-guide"><button class="hotspot hotspot-left active" data-zone="cheek" aria-label="查看脸颊区域">+</button><button class="hotspot hotspot-right" data-zone="forehead" aria-label="查看额头区域">+</button></div><div class="camera-caption">将面部对准轮廓 · 点选区域查看示意</div></div><div class="camera-foot"><span>◈ 支持时仅粗略定位面部；区域与皮肤结构为交互示意。</span><span id="camera-message">摄像头画面仅在当前页面显示。</span></div></div>
+          <div class="mirror-panel"><div class="panel-eyebrow">你正在探索 / <span id="zone-label">脸颊区域</span></div><h2>一小块肌肤，<br>有自己的护理故事。</h2><div class="layer-model" aria-label="皮肤结构示意"><div class="layer layer-surface"><span>护理产品接触皮肤表面</span><div class="glow-dots">✦　✧　✦</div></div><div class="layer layer-barrier"><span>角质层与皮肤屏障</span><div class="layer-cells">◖◗ ◖◗ ◖◗ ◖◗ ◖◗</div></div><div class="layer layer-deep"><span>更深层结构 · 不由手机观测</span></div></div><div class="step-tabs" role="tablist" aria-label="作用过程"><button class="active" data-step="0" role="tab">涂抹当下</button><button data-step="1" role="tab">成分解释</button><button data-step="2" role="tab">长期观察</button></div><div class="step-copy"><strong id="step-title">这一步，在做什么？</strong><p id="step-text">面霜在洁面和精华之后使用。涂抹后的柔润感可以立即感受到，但这不能证明深层皮肤状态已经改变。</p></div><button class="secondary-btn" id="mirror-to-growth">查看我的生长图谱 <span>↗</span></button></div></div>
+        <div class="lab-section" id="lab-section"><div class="section-heading"><div><div class="section-kicker">INGREDIENT LAB / 成分实验室</div><h2>从原料到配方，把依据展开</h2></div><span class="subtle" id="lab-product-name">当前产品：美白奶罐 Pro</span></div><div class="lab-grid"><div class="lab-flow"><div class="flow-node"><span>01</span><strong>原料方向</strong><small id="lab-origin">光果甘草</small></div><div class="flow-line"></div><div class="flow-node"><span>02</span><strong>核心成分</strong><small id="lab-active">光甘草定</small></div><div class="flow-line"></div><div class="flow-node"><span>03</span><strong>配方思路</strong><small id="lab-formula">极光甘草复配</small></div><div class="flow-line"></div><div class="flow-node"><span>04</span><strong>护理目标</strong><small id="lab-goal">焕亮 + 修护</small></div></div><div class="evidence-card"><span class="evidence-label">证据卡片 · 品牌公开资料</span><h3 id="lab-evidence-title">产品为什么这样设计？</h3><p id="lab-evidence-copy">谷雨官方将这款面霜描述为以“极光甘草”复配成分为核心，搭配保湿、修护相关成分的美白修护产品。产品页披露了美白祛斑类特殊化妆品注册信息和部分功效测试来源。</p><div class="evidence-tags" id="lab-evidence-tags"><span>品牌产品说明</span><span>注册功效</span><span>具体效果因人而异</span></div><a id="lab-evidence-source" href="https://guyu.com.cn/item/8.html" target="_blank" rel="noopener">阅读官网资料 ↗</a></div></div><div class="evidence-boundary"><strong>如何读这张图</strong><span>原料、核心成分和功效宣称来自品牌公开资料；并非完整配方。皮肤分层与光点只是机制示意，不是对你个人皮肤内部或功效的检测。</span></div></div>
+      </section>
+
+      <section class="page" id="page-growth" aria-labelledby="growth-title"><div class="page-heading"><div class="section-kicker">YOUR GROWTH MAP / 生长图谱</div><h1 id="growth-title">坚持有痕迹，<br><em>变化有依据。</em></h1><p>把“我用了什么”和“我感觉如何”放在同一条时间线上。这里展示的是你输入的记录，不推断某款产品造成了某种变化。</p></div><div class="growth-overview"><div class="growth-main-card"><div class="growth-card-top"><span class="tiny-pill green">过去 14 天</span><span id="range-label"></span></div><div class="growth-large"><span id="logged-days">0</span><div>天<br><small>留下护理记录</small></div></div><p>每一个圆点代表一天；叶片只会随真实记录生长。</p><div class="day-grid" id="day-grid" aria-label="过去14天护理记录"></div><div class="growth-legend"><span><i class="legend-done"></i> 有记录</span><span><i class="legend-empty"></i> 未记录</span></div></div><div class="growth-plant-card"><div class="plant-kicker">我的护理植物</div><div class="plant-art" id="plant-art" aria-hidden="true"><div class="soil"></div><div class="stem"></div><div class="plant-leaf leaf-a"></div><div class="plant-leaf leaf-b"></div><div class="plant-leaf leaf-c"></div><div class="plant-leaf leaf-d"></div><div class="plant-bud"></div></div><strong id="plant-title">从今天开始，慢慢生长。</strong><p id="plant-copy">每一次记录，都是你愿意关注自己的证据。</p></div></div><div class="section-heading"><div><div class="section-kicker">SELF REPORT / 自己的感受</div><h2>给今天留下一句真实的反馈</h2></div><span class="subtle">0 = 很不明显 · 4 = 很明显</span></div><div class="reflection-card"><div class="rating-row"><div><strong>干燥 / 紧绷</strong><small>你现在的主观感受</small></div><div class="rating-options" id="dry-rating" role="group" aria-label="干燥紧绷程度"></div></div><div class="rating-row"><div><strong>暗沉感</strong><small>你现在的主观感受</small></div><div class="rating-options" id="dull-rating" role="group" aria-label="暗沉程度"></div></div><div class="reflection-actions"><button class="primary-btn" id="save-reflection">保存今日感受 <span>↗</span></button><span id="reflection-feedback" aria-live="polite"></span></div></div><div class="section-heading"><div><div class="section-kicker">TIMELINE / 可回看的记录</div><h2>你的 28 天时间线</h2></div></div><div class="timeline-card"><div id="timeline-list"></div><div class="timeline-foot">目前展示最近的本机记录。相机画面和照片不会被保存。</div></div><div class="insight-card"><span class="insight-icon">✦</span><div><strong>关于“变化”的解释</strong><p id="insight-text">有了几天连续记录之后，这里会帮助你回顾使用与自评。记录之间的关联不能单独证明因果，还需考虑防晒、睡眠、环境等因素。</p></div><span class="insight-tag">规则演示 · 非 AI 诊断</span></div></section>
+
+      <footer class="site-footer"><div>谷雨「知肤生长图谱」概念原型 · 非谷雨官方产品</div><div>示意动画 ≠ 皮肤内部检测 · 自评变化 ≠ 产品功效证明</div></footer>
+    </main>
+    <div class="navigation-dock"><nav class="mobile-nav" aria-label="底部导航"><button data-tab="welcome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>首页</span></button><button data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v14H7zM9 7V3h6v4M10 12h4"/></svg><span>护理</span></button><button data-tab="growth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v16H5zM8 2v6M16 2v6M5 10h14M9 14h1M14 14h1M9 17h1"/></svg><span>记录</span></button></nav><button type="button" class="ai-dock-button" data-tab="assistant" aria-label="AI 知肤助手"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5zM20 2v4M18 4h4"/></svg><span>AI</span></button></div>
+    <div class="modal-backdrop" id="scan-modal" hidden><div class="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title"><button id="scan-close" class="modal-close" aria-label="关闭">×</button><div class="section-kicker">PRODUCT LOOKUP / 产品识别</div><h2 id="scan-title">扫描官网产品二维码</h2><p>将二维码放进取景框。原型仅匹配产品库已收录的谷雨官网链接；也可以直接在产品库搜索。</p><div class="scan-frame"><video id="scan-video" autoplay playsinline muted></video><div class="scan-corners"></div></div><div id="scan-feedback" aria-live="polite">正在准备摄像头…</div><button class="primary-btn" id="scan-sample">前往产品库搜索 <span>↗</span></button></div></div>
+  </div>
+</body>
+</html>
