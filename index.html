@@ -12,7 +12,7 @@
   <title>谷雨知肤生长图谱 · 概念原型</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="modal.css">
-  <link rel="stylesheet" href="ar.css?v=finger1">
+  <link rel="stylesheet" href="ar.css?v=load2">
   <link rel="stylesheet" href="catalog.css">
   <link rel="stylesheet" href="journey.css?v=1">
   <link rel="stylesheet" href="visual-refresh.css?v=minimal3">
@@ -25,8 +25,11 @@
   <script defer src="lifestyle.js?v=life1"></script>
   <script defer src="vendor/fflate-0.8.3.js"></script>
   <script defer src="health-data.js?v=health1"></script>
-  <script defer src="app.js?v=health1"></script>
-  <script defer src="liquid-glass.js?v=glass1"></script>
+  <script defer src="assistant-config.js?v=focus1"></script>
+  <script defer src="assistant.js?v=deepseek1"></script>
+  <script defer src="app.js?v=load2"></script>
+  <script defer src="liquid-glass.js?v=focus1"></script>
+  <link rel="stylesheet" href="focus-ui.css?v=focus1">
 </head>
 <body class="is-welcome">
   <div class="app-shell">
@@ -95,7 +98,7 @@
 
       <footer class="site-footer"><div>谷雨「知肤生长图谱」概念原型 · 非谷雨官方产品</div><div>示意动画 ≠ 皮肤内部检测 · 自评变化 ≠ 产品功效证明</div></footer>
     </main>
-    <nav class="mobile-nav" aria-label="底部导航"><button data-tab="welcome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>首页</span></button><button data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v14H7zM9 7V3h6v4M10 12h4"/></svg><span>护理</span></button><button data-tab="growth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v16H5zM8 2v6M16 2v6M5 10h14M9 14h1M14 14h1M9 17h1"/></svg><span>记录</span></button></nav>
+    <div class="navigation-dock"><nav class="mobile-nav" aria-label="底部导航"><button data-tab="welcome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></svg><span>首页</span></button><button data-tab="products"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v14H7zM9 7V3h6v4M10 12h4"/></svg><span>护理</span></button><button data-tab="growth"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v16H5zM8 2v6M16 2v6M5 10h14M9 14h1M14 14h1M9 17h1"/></svg><span>记录</span></button></nav><button type="button" class="ai-dock-button" data-tab="assistant" aria-label="AI 知肤助手"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5zM20 2v4M18 4h4"/></svg><span>AI</span></button></div>
     <div class="modal-backdrop" id="scan-modal" hidden><div class="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title"><button id="scan-close" class="modal-close" aria-label="关闭">×</button><div class="section-kicker">PRODUCT LOOKUP / 产品识别</div><h2 id="scan-title">扫描官网产品二维码</h2><p>将二维码放进取景框。原型仅匹配产品库已收录的谷雨官网链接；也可以直接在产品库搜索。</p><div class="scan-frame"><video id="scan-video" autoplay playsinline muted></video><div class="scan-corners"></div></div><div id="scan-feedback" aria-live="polite">正在准备摄像头…</div><button class="primary-btn" id="scan-sample">前往产品库搜索 <span>↗</span></button></div></div>
   </div>
 </body>

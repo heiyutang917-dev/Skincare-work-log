@@ -1,23 +1,36 @@
 import { ApproachGate, FingertipTracker, faceBounds, faceZone, toStagePoint } from './ar-engine.mjs?v=finger1';
+import { loadARAsset, waitFor, abortError } from './ar-loader.mjs?v=load2';
 
 /** Camera landmarks are processed locally; 2D proximity cannot verify physical contact. */
-export async function startARMirror({ video, stage, canvas, onApproach, onStatus, onFace = () => {}, onPointer = () => {}, onFallback = () => {} }) {
-  const { FilesetResolver, FaceLandmarker, HandLandmarker } = await import('./vendor/vision_bundle.mjs');
-  const wasm = await FilesetResolver.forVisionTasks(new URL('./vendor/wasm/', import.meta.url).href);
-  let faceTask, handTask;
+export async function startARMirror({ video, stage, canvas, signal, onApproach, onStatus, onLoad = () => {}, onReady = () => {}, onTracking = () => {}, onFace = () => {}, onPointer = () => {}, onFallback = () => {} }) {
+  const loading = new AbortController(), cancel = () => loading.abort();
+  signal?.addEventListener('abort',cancel,{once:true}); if(signal?.aborted)loading.abort();
+  let faceTask, handTask, wasm, wasmURL=null, FilesetResolver, FaceLandmarker, HandLandmarker;
+  const closed=new WeakSet();
+  function closeTask(task){if(task&&!closed.has(task)){closed.add(task);task.close();}}
+  async function createTask(factory,label){
+    onLoad({phase:'init',label}); let rejected=false;
+    const promise=Promise.resolve().then(factory);
+    promise.then(task=>{if(rejected||loading.signal.aborted)closeTask(task);},()=>{});
+    try{return await waitFor(promise,loading.signal,20000);}catch(error){rejected=true;throw error;}
+  }
   try {
-    faceTask = await FaceLandmarker.createFromOptions(wasm, {
-      baseOptions: { modelAssetPath: new URL('./models/face_landmarker.task', import.meta.url).href, delegate: 'CPU' },
-      runningMode: 'VIDEO', numFaces: 1, minFaceDetectionConfidence: .5,
-      minFacePresenceConfidence: .5, minTrackingConfidence: .5,
-      outputFaceBlendshapes: false, outputFacialTransformationMatrixes: false
-    });
-    handTask = await HandLandmarker.createFromOptions(wasm, {
-      baseOptions: { modelAssetPath: new URL('./models/hand_landmarker.task', import.meta.url).href, delegate: 'CPU' },
+    onLoad({phase:'module',label:'手指识别'});
+    ({ FilesetResolver, FaceLandmarker, HandLandmarker } = await waitFor(import('./vendor/vision_bundle.mjs'),loading.signal,18000));
+    wasm = await waitFor(FilesetResolver.forVisionTasks(new URL('./vendor/wasm',import.meta.url).href),loading.signal,10000);
+    if(wasm.wasmBinaryPath){
+      const file=new URL(wasm.wasmBinaryPath).pathname.split('/').pop();
+      const binary=await loadARAsset('vendor/wasm/'+file,'识别引擎',{signal:loading.signal,onLoad});
+      wasmURL=URL.createObjectURL(new Blob([binary],{type:'application/wasm'}));wasm={...wasm,wasmBinaryPath:wasmURL};
+    }
+    const model=await loadARAsset('models/hand_landmarker.task','手指模型',{signal:loading.signal,onLoad});
+    handTask = await createTask(() => HandLandmarker.createFromOptions(wasm, {
+      baseOptions: { modelAssetBuffer:model, delegate: 'CPU' },
       runningMode: 'VIDEO', numHands: 1, minHandDetectionConfidence: .45,
       minHandPresenceConfidence: .45, minTrackingConfidence: .45
-    });
-  } catch (error) { faceTask?.close(); handTask?.close(); throw error; }
+    }),'手指识别');
+    if(loading.signal.aborted)throw abortError();
+  } catch (error) { closeTask(faceTask); closeTask(handTask); if(wasmURL)URL.revokeObjectURL(wasmURL);signal?.removeEventListener('abort',cancel);throw error; }
 
   const ctx = canvas.getContext('2d'), gate = new ApproachGate(), tracker = new FingertipTracker();
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -25,6 +38,18 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
   let stopped = false, frameId = 0, lastFaceInference = -Infinity, lastHandInference = -Infinity, lastVideoTime = -1;
   let lastFace = null, lastHand = null, lastFaceAt = -Infinity, frame = null, zone = null, status = '';
   let ripples = [], trail = [], lastRipple = null, lastTrailAt = -Infinity;
+  let faceFailed=false, tracking='',faceTimer=null;
+  async function prepareFace(){
+    try{
+      const model=await loadARAsset('models/face_landmarker.task','面部定位',{signal:loading.signal,onLoad});
+      const task=await createTask(()=>FaceLandmarker.createFromOptions(wasm,{
+        baseOptions:{modelAssetBuffer:model,delegate:'CPU'},runningMode:'VIDEO',numFaces:1,
+        minFaceDetectionConfidence:.5,minFacePresenceConfidence:.5,minTrackingConfidence:.5,
+        outputFaceBlendshapes:false,outputFacialTransformationMatrixes:false
+      }),'面部定位');
+      if(stopped){closeTask(task);return;}faceTask=task;onReady('face');onLoad({phase:'ready',label:'面部定位'});
+    }catch(error){if(!stopped){faceFailed=true;onLoad({phase:'failed',label:'面部定位',message:error.message});}}
+  }
 
   function say(next) { if (next !== status) { status = next; onStatus(next); } }
   function position(point) { return toStagePoint(point, video.videoWidth, video.videoHeight, stage.clientWidth, stage.clientHeight, true); }
@@ -80,14 +105,16 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
     const resultHand = handTask.detectForVideo(video, now);
     lastHand = resultHand.landmarks[0] || null;
     if (lastHand?.[8]) tracker.update(position(lastHand[8]), now);
-    if (now - lastFaceInference >= 110) {
+    if (faceTask && now - lastFaceInference >= 110) {
       lastFaceInference = now;
       const found = faceTask.detectForVideo(video, now).faceLandmarks[0];
       if (found) { lastFace = found; lastFaceAt = now; }
     }
     if (now - lastFaceAt > 240) lastFace = null;
     const box = lastFace && faceBounds(lastFace);
-    if (!box) { frame = null; zone = null; gate.update(null, now); onFace(null); say(lastHand ? '光点已跟上指尖，让面部轮廓也进入画面' : '让面部和食指进入画面'); return; }
+    const tracked=`${!!lastHand?.[8]}:${!!box}`;
+    if(tracking!==tracked){tracking=tracked;onTracking({hand:!!lastHand?.[8],face:!!box});}
+    if (!box) { frame = null; zone = null; gate.update(null, now); onFace(null); say(lastHand ? faceTask ? '光点已跟上指尖，让面部轮廓也进入画面' : faceFailed ? '手指光点可用，面部定位需重试；也可点选区域' : '手指光点已就绪，面部定位仍在准备' : '先让手掌和食指完整入镜，再慢慢靠近脸颊'); return; }
     const upper = position({ x: box.right, y: box.top }), lower = position({ x: box.left, y: box.bottom });
     frame = { left: upper.x, top: upper.y, width: lower.x - upper.x, height: lower.y - upper.y }; onFace(frame);
     if (!lastHand?.[8]) { zone = null; gate.update(null, now); say('面部已就绪，抬起食指，让指尖进入画面'); return; }
@@ -106,9 +133,10 @@ export async function startARMirror({ video, stage, canvas, onApproach, onStatus
   }
   function stop() {
     if (stopped) return;
-    stopped = true; cancelAnimationFrame(frameId); tracker.reset(); gate.reset(); ripples = []; trail = []; glow.remove();
-    ctx.clearRect(0, 0, canvas.width, canvas.height); faceTask?.close(); handTask?.close(); onFace(null); onPointer(null);
+    stopped = true; loading.abort(); clearTimeout(faceTimer); cancelAnimationFrame(frameId); tracker.reset(); gate.reset(); ripples = []; trail = []; glow.remove();
+    ctx.clearRect(0, 0, canvas.width, canvas.height); closeTask(faceTask); closeTask(handTask);if(wasmURL)URL.revokeObjectURL(wasmURL);signal?.removeEventListener('abort',cancel);onFace(null); onPointer(null);
   }
-  say('已就绪，抬起食指，让光点跟随你的指尖'); frameId = requestAnimationFrame(loop);
+  onReady('hand');say('手指识别已就绪，先让手掌和食指进入画面'); frameId = requestAnimationFrame(loop);
+  faceTimer=setTimeout(prepareFace,0);
   return { stop };
 }

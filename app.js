@@ -15,12 +15,14 @@
   let scanStream = null;
   let scanTimer = null;
   let arSession = null;
+  let arLoadController = null;
   let cameraRun = 0;
   let eventTimer = null;
   let selectedStep = 0;
   let selectedZone = 'cheek';
   let activeTab = 'welcome';
   let previousFocus = null;
+  let routeReady = false;
   let draftRatings = {};
   let catalogFamily = 'all';
   const stage = $('camera-stage');
@@ -39,6 +41,13 @@
   $('camera-help').addEventListener('click', () => {
     const expanded = $('camera-help').getAttribute('aria-expanded') !== 'true';
     $('camera-help').setAttribute('aria-expanded', String(expanded)); $('camera-help-copy').hidden = !expanded;
+  });
+  document.querySelector('.camera-top').insertAdjacentHTML('afterend','<div class="ar-loading" id="ar-loading" hidden><div><span id="ar-load-label" role="status">准备手指识别</span><button type="button" id="ar-retry" hidden>重试识别</button></div><progress id="ar-load-progress" max="1" aria-label="识别资源下载进度"></progress></div>');
+  $('ar-retry').addEventListener('click', () => {
+    if (!mirrorStream) { toggleMirror(); return; }
+    arSession?.stop(); arSession = null; arLoadController?.abort();
+    stage.classList.remove('ar-ready'); skin.clearAnchor();
+    startTracking(++cameraRun);
   });
   $('page-mirror').querySelector('.page-heading p').textContent = '让光点跟随指尖，靠近肌肤，看见护理的作用';
   stage.querySelector('.camera-caption').textContent = '点选脸颊或额头 · 先体验配方示意';
@@ -59,6 +68,31 @@
   $('page-growth').querySelector('.page-heading p').textContent = '每一次记录，都是照顾自己的痕迹。';
   $('today-focus').querySelector('h2').textContent = '记录今天的护理';
   $('welcome-date').textContent = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date());
+
+  // Dedicated task screens keep camera and conversation separate from the journal
+  $('page-mirror').insertAdjacentHTML('afterbegin', '<div class="focus-header"><button type="button" class="round-button" data-focus-back aria-label="返回">‹</button><h1 id="ar-screen-title">AR 护肤</h1><button type="button" class="round-button" id="ar-help-shortcut" aria-label="查看手势指引">?</button></div>');
+  const arDrawer = document.createElement('div'); arDrawer.id = 'ar-drawer'; arDrawer.className = 'ar-drawer'; arDrawer.hidden = true;
+  arDrawer.innerHTML = '<div class="ar-sheet" role="dialog" aria-modal="true" aria-label="护理原理" tabindex="-1"><button type="button" class="round-button ar-sheet-close" id="ar-close-principle" aria-label="关闭原理讲解">×</button></div>';
+  $('page-mirror').append(arDrawer); arDrawer.firstElementChild.append(document.querySelector('.mirror-panel'));
+  const labDetails = document.createElement('details'); labDetails.className = 'ar-source-details'; labDetails.innerHTML = '<summary>查看更多品牌资料</summary>';
+  arDrawer.firstElementChild.append(labDetails); labDetails.append($('lab-section'));
+  $('page-mirror').insertAdjacentHTML('beforeend', '<div class="ar-task-actions"><button type="button" class="secondary-btn" id="ar-open-principle">原理讲解</button><button type="button" class="primary-btn" data-journey="today">完成，记录肤感 <span>→</span></button></div>');
+  function closePrinciple(restore = true) { arDrawer.hidden = true; if (restore) $('ar-open-principle').focus(); }
+  function openPrinciple() { arDrawer.hidden = false; arDrawer.querySelector('.ar-sheet').focus(); }
+  $('ar-open-principle').addEventListener('click', openPrinciple);
+  $('ar-close-principle').addEventListener('click', () => closePrinciple());
+  arDrawer.addEventListener('click', event => { if (event.target === arDrawer) closePrinciple(); });
+  $('ar-help-shortcut').addEventListener('click', () => { $('camera-help').click(); });
+  document.addEventListener('keydown', event => {
+    if (arDrawer.hidden) return;
+    if (event.key === 'Escape') { event.preventDefault(); closePrinciple(); }
+    if (event.key === 'Tab') {
+      const nodes = [...arDrawer.querySelectorAll('button,a,summary,[tabindex="0"]')].filter(node => node.getClientRects().length);
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === arDrawer.firstElementChild)) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
+  });
 
   // The drag gesture has an ordinary button alternative for touch and keyboard access.
   const slideTrack = $('slide-entry');
@@ -126,6 +160,32 @@
     },
     manual: () => state.lifestyle || {}, care: () => state.records, today, refresh: () => render()
   });
+  function fold(selector, title) {
+    const node = document.querySelector(selector); if (!node) return;
+    const details = document.createElement('details'); details.className = 'compact-disclosure';
+    const summary = document.createElement('summary'); summary.textContent = title;
+    node.before(details); details.append(summary, node);
+  }
+  fold('#page-today .note-bar', '使用提醒与品牌依据');
+  fold('#page-growth .insight-card', '怎样理解这些变化');
+  $('page-growth').querySelector('.growth-main-card > p').textContent = '每一格，都是你真实留下的一天';
+  $('page-growth').querySelector('.page-heading p').textContent = '护理与生活，慢慢留在这里';
+  $('today-focus').querySelector('h2').textContent = '给今天留个记录';
+  document.querySelector('#today-focus > .subtle').textContent = '当前浏览器保存';
+  const assistant = window.GUYU_ASSISTANT.create({
+    product: () => activeProduct(),
+    feelings: () => {
+      const keys = Array.from({ length: 7 }, (_, i) => dateKey(dayAt(-i)));
+      return keys.flatMap(date => {
+        const care = record(date), life = state.lifestyle?.[date] || {};
+        const feeling = care.feeling || life.feeling;
+        const row = { date };
+        if (['comfortable', 'dry', 'irritated'].includes(feeling)) row.feeling = feeling;
+        for (const key of ['dry', 'dull']) if (Number.isInteger(care[key]) && care[key] >= 0 && care[key] <= 4) row[key] = care[key];
+        return Object.keys(row).length > 1 ? [row] : [];
+      });
+    }, navigate: tab => showTab(tab)
+  });
   function productById(id) { return products.find((product) => product.id === id); }
   function activeProduct() { return productById(state.selectedProductId) || productById('cream-pro') || products[0]; }
   function makeChip(value) { const chip = document.createElement('span'); chip.textContent = value; return chip; }
@@ -149,6 +209,7 @@
     $('today-product-family').textContent = product.family === '双效护理' ? '谷雨双效护理产品' : `谷雨${product.family}系列`;
     $('today-product-short').textContent = product.short;
     $('today-product-name').textContent = product.name;
+    assistant.render();
     document.querySelectorAll('.journey-product').forEach((element) => { element.textContent = product.short; });
     $('today-bottle-name').textContent = product.short;
     const visual = document.querySelector('.product-bottle');
@@ -244,12 +305,20 @@
     }
   }
 
-  function showTab(tab, scrollId) {
+  function showTab(tab, scrollId, fromHistory = false) {
+    if (!$(`page-${tab}`)) return;
+    const previous = activeTab;
     activeTab = tab;
+    document.body.classList.toggle('is-focus', ['mirror', 'assistant'].includes(tab));
+    document.body.dataset.screen = tab;
+    if (tab !== 'mirror') closePrinciple(false);
+    if (tab !== 'assistant') assistant.leave(); else assistant.render();
+    if (routeReady && !fromHistory && previous !== tab) history.pushState({ guyuTab: tab }, '', '#' + tab);
+
     document.body.classList.toggle('is-welcome', tab === 'welcome');
     document.querySelectorAll('.page').forEach((el) => el.classList.toggle('active', el.id === `page-${tab}`));
     const navTab = tab === 'lifestyle' ? 'growth' : ['mirror', 'today'].includes(tab) ? 'products' : tab;
-    document.querySelectorAll('.mobile-nav [data-tab], .nav-item[data-tab]').forEach((el) => {
+    document.querySelectorAll('.mobile-nav [data-tab], .ai-dock-button[data-tab], .nav-item[data-tab]').forEach((el) => {
       const current = el.dataset.tab === navTab;
       el.classList.toggle('active', current);
       if (current) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
@@ -259,6 +328,7 @@
     window.scrollTo({ top: 0, behavior: 'instant' });
     const heading = $(`page-${tab}`).querySelector('h1, h2');
     if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
+    if (tab === 'mirror' && scrollId === 'lab-section') { openPrinciple(); labDetails.open = true; }
     if (scrollId) setTimeout(() => $(scrollId)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
   }
 
@@ -384,6 +454,55 @@
     if (eventTimer) clearTimeout(eventTimer);
     eventTimer = setTimeout(() => { arEvent.hidden = true; }, 3200);
   }
+  async function startTracking(run) {
+    arLoadController?.abort();
+    const controller = new AbortController(); arLoadController = controller;
+    $('ar-loading').hidden = false; $('ar-retry').hidden = true; $('ar-load-progress').hidden = false; $('ar-load-progress').removeAttribute('value');
+    $('ar-load-label').textContent = '准备手指识别'; $('camera-mode').textContent = '加载手指识别';
+    let importTimer, abortImport;
+    try {
+      const module = await Promise.race([
+        import('./ar-mirror.mjs?v=load2'),
+        new Promise((_,reject) => {
+          importTimer = setTimeout(() => reject(new Error('识别组件加载超时，请重试')),18000);
+          abortImport = () => reject(new DOMException('已停止','AbortError'));
+          controller.signal.addEventListener('abort',abortImport,{once:true});
+        })
+      ]);
+      clearTimeout(importTimer); controller.signal.removeEventListener('abort',abortImport);
+      if (run !== cameraRun || controller.signal.aborted) return;
+      const session = await module.startARMirror({ video:$('camera-video'), stage, canvas:overlay, signal:controller.signal,
+        onLoad: (info) => {
+          if (run !== cameraRun) return;
+          if (info.phase === 'ready') { $('ar-loading').hidden = true; return; }
+          $('ar-loading').hidden = false;
+          if (info.phase === 'failed') { $('ar-load-label').textContent = '手指光点可用，面部定位需重试'; $('ar-load-progress').hidden = true; $('ar-retry').hidden = false; return; }
+          $('ar-load-progress').hidden = false;
+          if (info.phase === 'download') {
+            const mb = n => (n / 1048576).toFixed(1);
+            $('ar-load-label').textContent = `下载${info.label} ${mb(info.loaded)} / ${mb(info.total)} MB`;
+            $('ar-load-progress').max = Math.max(1,info.total); $('ar-load-progress').value = info.loaded;
+          } else { $('ar-load-progress').removeAttribute('value'); $('ar-load-label').textContent = info.phase === 'unpack' ? `校验${info.label}…` : `启动${info.label}…`; }
+        },
+        onReady: (kind) => { if (run === cameraRun && kind === 'hand') { stage.classList.add('ar-ready'); $('camera-mode').textContent = '寻找食指'; } },
+        onTracking: (found) => { if (run === cameraRun) $('camera-mode').textContent = found.hand ? '已找到食指' : '寻找食指'; },
+        onApproach: (zone,point) => { if (run === cameraRun) triggerMechanism(zone,point); },
+        onFace: (bounds) => { if (run === cameraRun) skin.follow(bounds); },
+        onPointer: (point) => { if (run === cameraRun && point) skin.track(point); },
+        onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); skin.clearAnchor(); $('camera-mode').textContent = '手指识别已暂停'; $('ar-loading').hidden = false; $('ar-load-label').textContent = '识别已暂停，可以重试'; $('ar-load-progress').hidden = true; $('ar-retry').hidden = false; } },
+        onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
+      });
+      if (run !== cameraRun || controller.signal.aborted) { session.stop(); return; }
+      arSession = session;
+    } catch (error) {
+      if (run !== cameraRun || controller.signal.aborted) return;
+      controller.abort();
+      $('camera-mode').textContent = '手指识别未启动';
+      const message = /超时|缺失|下载失败|不完整|校验失败|不支持模型解压/.test(error.message) ? error.message : '识别组件没有加载完成，请重试';
+      $('ar-load-label').textContent = message; $('ar-load-progress').hidden = true; $('ar-retry').hidden = false; $('ar-loading').hidden = false;
+      $('camera-message').textContent = '相机已开启，手指识别尚未就绪；点选体验仍可使用';
+    } finally { clearTimeout(importTimer); if (abortImport) controller.signal.removeEventListener('abort',abortImport); }
+  }
   async function toggleMirror() {
     if (mirrorStream) { stopMirror(); return; }
     if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) {
@@ -402,20 +521,9 @@
       stage.classList.add('camera-on');
       $('camera-toggle').textContent = '关闭摄像头';
       $('camera-toggle').disabled = false;
-      $('camera-mode').textContent = '准备手势识别';
       renderStep();
-      $('camera-message').textContent = '正在加载面部与手部识别模型，首次打开需要片刻…';
-      const { startARMirror } = await import('./ar-mirror.mjs?v=finger1');
-      if (run !== cameraRun) return;
-      const session = await startARMirror({ video, stage, canvas: overlay,
-        onApproach: (zone, point) => { if (run === cameraRun) triggerMechanism(zone, point); },
-        onFace: (bounds) => { if (run === cameraRun) skin.follow(bounds); },
-        onPointer: (point) => { if (run === cameraRun && point) skin.track(point); },
-        onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); $('camera-mode').textContent = '相机 · 点选可用'; skin.clearAnchor(); } },
-        onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
-      });
-      if (run !== cameraRun) { session.stop(); return; }
-      arSession = session; stage.classList.add('ar-ready'); $('camera-mode').textContent = '面部与手指识别中';
+      $('camera-message').textContent = '先准备手指光点，面部定位会随后加载';
+      await startTracking(run);
     } catch (error) {
       if (run !== cameraRun) return;
       if (mirrorStream && !stage.classList.contains('camera-on')) { mirrorStream.getTracks().forEach(track => track.stop()); mirrorStream = null; $('camera-video').srcObject = null; }
@@ -425,6 +533,7 @@
   }
   function stopMirror() {
     cameraRun += 1;
+    arLoadController?.abort(); arLoadController = null;
     arSession?.stop(); arSession = null;
     mirrorStream?.getTracks().forEach((track) => track.stop()); mirrorStream = null;
     $('camera-video').srcObject = null; stage.classList.remove('camera-on', 'ar-ready');
@@ -432,6 +541,7 @@
     stage.querySelectorAll('.ar-touch').forEach(el => el.remove());
     $('camera-toggle').disabled = false; $('camera-toggle').textContent = '开启摄像头';
     $('camera-mode').textContent = '点选体验';
+    $('ar-loading').hidden = true; $('ar-retry').hidden = true;
     $('camera-message').textContent = '相机未开启；点选体验可用。画面仅在本页处理。';
     skin.pause(); skin.clearAnchor();
     if (skin.product) renderStep();
@@ -478,6 +588,7 @@
   document.querySelectorAll('[data-tab]').forEach((button) => button.addEventListener('click', () => showTab(button.dataset.tab, button.dataset.scroll)));
   $('hero-explore').addEventListener('click', () => showTab('products'));
   document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-focus-back]')) { history.back(); return; }
     const button = event.target.closest('[data-journey]');
     if (button) showTab(button.dataset.journey);
   });
@@ -531,4 +642,7 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopMirror(); if (!$('scan-modal').hidden) closeScanner(); } });
   renderStep(); render(); renderCatalog();
   window.GUYU_LIFESTYLE.applyTypography();
+  routeReady = true;
+  history.replaceState({ guyuTab: 'welcome' }, '', location.pathname + location.search);
+  window.addEventListener('popstate', event => showTab(event.state?.guyuTab || 'welcome', null, true));
 })();

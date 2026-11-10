@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const selector = '.mobile-nav,.slide-entry,.slide-thumb,.welcome-history,.primary-btn,.secondary-btn,.catalog-select,.camera-toggle,.journey-bar button,.catalog-filters button,.choice-row button,.camera-zones button,.rating-options button,.life-button,.life-round,.life-feelings button,.life-modal-close,.mechanism-controls button:not(#mechanism-replay),.skin-loupe';
+  const selector = '.ai-dock-button,.mobile-nav,.slide-entry,.slide-thumb,.welcome-history,.primary-btn,.secondary-btn,.catalog-select,.camera-toggle,.journey-bar button,.catalog-filters button,.choice-row button,.camera-zones button,.rating-options button,.life-button,.life-round,.life-feelings button,.life-modal-close,.mechanism-controls button:not(#mechanism-replay),.skin-loupe';
   const nav = document.querySelector('.mobile-nav');
   const lens = document.createElement('span'); lens.className = 'glass-nav-lens'; lens.setAttribute('aria-hidden', 'true'); nav?.prepend(lens);
   let workFrame = null, glintFrame = null, glintTarget = null, pressed = null, pendingPointer = null;
