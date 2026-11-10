@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: guyu-ai-service
+    runtime: node
+    plan: free
+    buildCommand: node --check server.mjs
+    startCommand: node server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: AI_PROVIDER
+        value: deepseek
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DEEPSEEK_MODEL
+        value: deepseek-flash
+      - key: AI_ACCESS_TOKEN
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: https://heiyutang917-dev.github.io
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_VERSION
+        value: "22"
