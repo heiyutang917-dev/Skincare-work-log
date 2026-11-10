@@ -15,7 +15,7 @@
         <div class="assistant-scroll" id="assistant-scroll">
           <div class="ai-product-hero"><img id="ai-product-image" alt=""><div><span class="ai-eyebrow">围绕你的这一款</span><h2 id="ai-product-name"></h2><span id="ai-product-effects"></span><button type="button" class="ai-change" id="ai-change-product">更换产品 ↗</button></div></div>
           <details class="ai-facts"><summary>先看看产品资料 <span>＋</span></summary><p id="ai-product-facts"></p><small id="ai-product-pending"></small><a id="ai-product-source" target="_blank" rel="noopener">品牌资料 ↗</a></details>
-          <details class="ai-settings" id="ai-settings"><summary>AI 连接设置</summary><p>连接后，发送的问题会交给 OpenAI 处理</p><label for="ai-endpoint">服务地址</label><input id="ai-endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://你的服务地址"><label for="ai-access">体验码</label><input id="ai-access" type="password" autocomplete="off" maxlength="256" placeholder="由网站管理者提供，非模型密钥"><button type="button" class="secondary-btn" id="ai-connect">连接服务</button><button type="button" class="ai-change" id="ai-disconnect">断开连接</button><small>连接信息仅保留在本次打开期间</small></details>
+          <details class="ai-settings" id="ai-settings"><summary>AI 连接设置</summary><p id="ai-provider-note">发送的问题与勾选的肤感会交给所连接的模型服务处理</p><label for="ai-endpoint">服务地址</label><input id="ai-endpoint" type="url" inputmode="url" autocomplete="off" placeholder="https://你的服务地址"><label for="ai-access">体验码</label><input id="ai-access" type="password" autocomplete="off" maxlength="256" placeholder="由网站管理者提供，非模型密钥"><button type="button" class="secondary-btn" id="ai-connect">连接服务</button><button type="button" class="ai-change" id="ai-disconnect">断开连接</button><small>连接信息仅保留在本次打开期间</small></details>
           <div class="ai-conversation" id="ai-conversation" role="log" aria-label="与知肤助手的对话" aria-live="polite"><div class="ai-intro"><span class="ai-spark" aria-hidden="true">✧</span><h2>这一款，你想了解什么</h2><p>看懂成分，也照顾真实的肤感</p></div></div>
           <div class="ai-suggestions"><button type="button" data-ai-question="这款产品的公开核心成分分别有什么作用？">成分如何起作用</button><button type="button" data-ai-question="这款产品怎样使用，需要注意什么？">怎么用更合适</button><button type="button" data-ai-question="请结合我选择分享的肤感记录，解释护理时要注意什么；没有记录时请先问我">结合我的肤感</button></div>
         </div>
@@ -45,7 +45,8 @@
       $('ai-connect').disabled = busy;
       $('ai-share-feelings').disabled = busy;
       $('ai-question').readOnly = busy;
-      $('ai-connection-label').textContent = connection ? 'AI · OpenAI' : 'AI 尚未连接';
+      $('ai-connection-label').textContent = connection ? `AI · ${connection.provider}` : 'AI 尚未连接';
+      $('ai-provider-note').textContent = connection ? `发送的问题与勾选的肤感会交给 ${connection.provider} 处理` : '发送的问题与勾选的肤感会交给所连接的模型服务处理';
     }
     function cancel() { if (controller) $('ai-status').textContent = '已取消，问题仍保留'; controller?.abort(); controller = null; controls(); }
     function stopCheck() { checkController?.abort(); checkController = null; checking = false; }
@@ -69,13 +70,13 @@
         const response = await fetch(base + '/api/status', { headers: { Authorization: 'Bearer ' + code }, credentials: 'omit', cache: 'no-store', signal: run.signal });
         if (!response.ok) throw new Error(response.status === 401 ? '体验码不正确' : '服务尚未准备好');
         const data = await response.json();
-        if (data.provider !== 'OpenAI' || data.configured !== true) throw new Error('服务还没有配置模型');
+        if (!['OpenAI','DeepSeek'].includes(data.provider) || data.configured !== true) throw new Error('服务还没有配置模型');
         if (run.signal.aborted || checkController !== run) return;
-        connection = { base, code }; settings(false); $('ai-status').textContent = '服务已连接，可以发送问题';
+        connection = { base, code, provider:data.provider }; settings(false); $('ai-status').textContent = '服务已连接，可以发送问题';
       } catch (error) { if (checkController === run) $('ai-status').textContent = error.name === 'AbortError' ? '连接超时，请稍后再试' : error.message === 'Failed to fetch' ? '没有连上服务，请检查地址与网络' : error.message; }
       finally { clearTimeout(timer); if (checkController === run) { checkController = null; checking = false; controls(); } }
     };
-    function bubble(role, value) { const node = document.createElement('div'); node.className = 'ai-bubble ' + role; const label = document.createElement('small'); label.textContent = role === 'user' ? '你' : '知肤助手 · AI'; const text = document.createElement('p'); text.textContent = value.replace(/。/g, '\n'); node.append(label, text); $('ai-conversation').append(node); return node; }
+    function bubble(role, value) { const node = document.createElement('div'); node.className = 'ai-bubble ' + role; const label = document.createElement('small'); label.textContent = role === 'user' ? '你' : `知肤助手 · ${connection?.provider || 'AI'}`; const text = document.createElement('p'); text.textContent = value.replace(/。/g, '\n'); node.append(label, text); $('ai-conversation').append(node); return node; }
     $('ai-form').addEventListener('submit', async event => {
       event.preventDefault();
       const message = $('ai-question').value.trim();
@@ -83,12 +84,16 @@
       const run = new AbortController(); controller = run; controls();
       const timer = setTimeout(() => run.abort(), 40000);
       const userBubble = bubble('user', message);
-      const payload = { productId: product().id, message, feelings: $('ai-share-feelings').checked ? feelings() : [], history: history.slice(-6) };
+      const payload = { productId: product().id, message, feelings: $('ai-share-feelings').checked ? feelings() : [], history: history.slice(-6), expectedProvider:connection.provider };
       $('ai-status').textContent = '正在回答…'; $('assistant-scroll').scrollTop = $('assistant-scroll').scrollHeight;
       try {
         const response = await fetch(connection.base + '/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + connection.code }, body: JSON.stringify(payload), signal: run.signal, credentials: 'omit', cache: 'no-store' });
-        if (!response.ok) throw new Error(({ 401: '体验码已失效，请重新连接', 429: '提问较多，请稍后再试', 503: '模型尚未配置', 504: '回答超时，请稍后重试' })[response.status] || '暂时没有收到回答，请重试');
+        if (!response.ok) {
+          let detail;try { detail=await response.json(); } catch (_) {}
+          throw new Error(({provider_changed:'模型服务已变更，请重新连接',provider_auth_failed:'模型密钥无效，请检查后台配置',provider_balance:'模型服务余额不足，请检查模型平台账号',provider_config_failed:'模型配置需要检查，请联系网站管理者',incomplete_answer:'回答未完成，请重新提问',empty_answer:'没有生成完整回答，请重试'})[detail?.error] || ({ 401: '体验码已失效，请重新连接', 429: '提问较多，请稍后再试', 503: '模型尚未配置', 504: '回答超时，请稍后重试' })[response.status] || '暂时没有收到回答，请重试');
+        }
         const data = await response.json();
+        if (data.provider && data.provider !== connection.provider) throw new Error('模型服务已变更，请重新连接');
         if (typeof data.answer !== 'string' || !data.answer.trim() || data.answer.length > 12000) throw new Error('回答格式有误，请重试');
         if (run.signal.aborted || controller !== run) return;
         bubble('assistant', data.answer); history.push({ role: 'user', content: message }, { role: 'assistant', content: data.answer.slice(0, 4000) }); history = history.slice(-6);
