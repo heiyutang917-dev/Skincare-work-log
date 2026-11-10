@@ -1,0 +1,6 @@
+{
+  "build": "20261110-clean1",
+  "entry": "index.html",
+  "aiButton": "护理页面底部记录右侧",
+  "backendIncluded": false
+}
