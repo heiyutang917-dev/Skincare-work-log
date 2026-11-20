@@ -18,7 +18,6 @@
   let arLoadController = null;
   let arModule = null;
   let cameraRun = 0;
-  let eventTimer = null;
   let selectedStep = 0;
   let selectedZone = 'cheek';
   let activeTab = 'welcome';
@@ -32,13 +31,23 @@
   const arEvent = document.createElement('div');
   arEvent.className = 'ar-event'; arEvent.hidden = true; arEvent.setAttribute('aria-live', 'polite');
   const arEventTitle = document.createElement('strong');
-  const arEventCopy = document.createElement('small');
-  arEvent.append(arEventTitle, arEventCopy); stage.append(arEvent);
+  arEvent.append(arEventTitle);
   const skin = new window.GUYU_SKIN.SkinExperience({ panel: document.querySelector('.mirror-panel'), stage,
-    onStep: (step) => { selectedStep = step; renderStep(); }
+    onStep: (step) => { selectedStep = step; renderStep(); },
+    onPreview: visible => {
+      const guidance = $('camera-guidance');
+      guidance.hidden = visible;
+      if (visible) {
+        const theme = skin.theme;
+        arEventTitle.textContent = theme.title + ' · ' + theme.focus;
+      }
+      arEvent.hidden = !visible;
+    }
   });
   stage.parentElement.querySelector('.camera-top > span').innerHTML = '<span class="camera-indicator"></span> <span id="camera-mode">点选体验</span>';
-  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 开启摄像头，让面部与食指进入画面<br>② 抬起食指，看到光点跟随指尖<br>③ 靠近脸颊或额头，光圈从当前位置展开<br>同一款产品只自动播放一次原理，移动时继续显示涟漪<br>手机判断画面位置接近，无法确认真实触碰</div></div>');
+  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-replay">重播动画</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 开启摄像头，让面部与食指进入画面<br>② 抬起食指，看到光点跟随指尖<br>③ 靠近脸颊或额头，光圈从当前位置展开<br>每款产品只自动演示一次，动画播完会淡出，也可以手动重播<br>手机判断画面位置接近，无法确认真实触碰</div></div>');
+  $('camera-guidance').after(arEvent);
+  $('camera-replay').addEventListener('click', () => skin.showPreview());
   $('camera-help').addEventListener('click', () => {
     const expanded = $('camera-help').getAttribute('aria-expanded') !== 'true';
     $('camera-help').setAttribute('aria-expanded', String(expanded)); $('camera-help-copy').hidden = !expanded;
@@ -204,7 +213,7 @@
 
   function selectProduct(id, goToToday = true) {
     if (!productById(id)) return;
-    skin.stop(); clearTimeout(eventTimer); arEvent.hidden = true; selectedStep = 0; selectedZone = 'cheek';
+    skin.stop(); selectedStep = 0; selectedZone = 'cheek';
     state.selectedProductId = id;
     save(); render(); renderStep(); renderCatalog();
     if (goToToday) showTab('mirror');
@@ -330,7 +339,7 @@
       if (current) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
     });
     if (tab === 'welcome') resetSlide();
-    if (tab !== 'mirror') { stopMirror(); skin.stop(); clearTimeout(eventTimer); arEvent.hidden = true; }
+    if (tab !== 'mirror') { stopMirror(); skin.stop(); }
     window.scrollTo({ top: 0, behavior: 'instant' });
     const heading = $(`page-${tab}`).querySelector('h1, h2');
     if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
@@ -451,14 +460,7 @@
       ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
       stage.querySelectorAll('.ar-touch').forEach((el, index, list) => { if (index < list.length - 6) el.remove(); });
     }
-    if (!skin.trigger(point)) return;
-    const product = activeProduct();
-    const zoneName = ({ cheek: '脸颊', forehead: '额头', chin: '下巴', center: '面部中央' })[zone] || '面部';
-    arEventTitle.textContent = `${zoneName} · ${window.GUYU_SKIN.profile(product).title}`;
-    arEventCopy.textContent = product.area === 'eye' ? '此处仅讲解眼周配方，不指引在该区域涂抹。' : '局部图为配方示意；下方可暂停、重播与查看依据。';
-    arEvent.hidden = false; arEvent.classList.remove('fade');
-    if (eventTimer) clearTimeout(eventTimer);
-    eventTimer = setTimeout(() => { arEvent.hidden = true; }, 3200);
+    skin.trigger(point);
   }
   async function startTracking(run, retry = '') {
     arLoadController?.abort();

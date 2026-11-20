@@ -46,7 +46,6 @@ button.guyu-glass.glass-down::before{opacity:1}
 .catalog-card.selected{border-color:#b6ccb7;box-shadow:inset 0 0 0 1px #bdcebd,0 6px 24px #2d4b3506}
 .catalog-search{background:#f9fcf5d9;border-color:#ffffffed;box-shadow:inset 0 1px 1px #fff,0 4px 12px #28463108}
 .product-text p,.why-card p,.step-copy p,.timeline-text p,.page-heading p{color:#5e7465}
-.skin-loupe.guyu-glass{--lg-fill:linear-gradient(135deg,#fcfff3eb,#e7f2e4d6);--lg-blur:blur(16px) saturate(1.3);color:var(--skin-accent);box-shadow:0 9px 28px #15372133,inset 0 1px 1px #fff}
 .life-modal{background:#2440333d;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
 .life-modal>section{background:linear-gradient(145deg,#fafff5f5,#ecf3e9f0);border:1px solid #ffffffed;box-shadow:0 20px 70px #153c2c2e,inset 0 1px 1px white}
 .life-modal-close.guyu-glass{background:var(--lg-fill);color:#42664d}

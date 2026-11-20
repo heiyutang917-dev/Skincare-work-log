@@ -45,10 +45,14 @@
       <g class="skin-eye" fill="none" stroke="currentColor" stroke-width="2"><path d="M110 54q90-48 180 0M110 58q90 42 180 0"/><path d="M130 79q70 27 140 0" stroke-dasharray="4 5"/></g>
     </svg>`;
   }
+  const PREVIEW_MS = 4800;
+  const FADE_MS = 320;
+
   class SkinExperience {
-    constructor({ panel, stage, onStep }) {
-      this.panel = panel; this.stage = stage; this.onStep = onStep;
+    constructor({ panel, stage, onStep, onPreview = () => {} }) {
+      this.panel = panel; this.stage = stage; this.onStep = onStep; this.onPreview = onPreview;
       this.product = null; this.step = 0; this.playing = false; this.timer = null; this.frame = null; this.anchor = null;
+      this.previewTimer = null; this.previewState = 'hidden'; this.lastPoint = null;
       this.autoShown = new Set();
       this.reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
       panel.innerHTML = `<div class="mechanism-heading"><div><div class="panel-eyebrow">配方原理 · 分步了解</div><h2 id="mechanism-title"></h2></div><span class="mechanism-counter" id="mechanism-counter">01 / 03</span></div>
@@ -59,7 +63,9 @@
         <div class="mechanism-ingredients"><span>官网公开核心成分</span><div id="mechanism-ingredients"></div></div>
         <details class="mechanism-evidence"><summary>成分依据与适用边界</summary><div><p id="mechanism-evidence"></p><p id="mechanism-boundary"></p><a id="mechanism-source" target="_blank" rel="noopener">查看品牌来源 ↗</a><small id="mechanism-review"></small></div></details>`;
       this.loupe = document.createElement('div'); this.loupe.className = 'skin-loupe'; this.loupe.hidden = true;
-      this.loupe.innerHTML = `<span class="loupe-heading">局部机制示意</span>${scene()}<span class="loupe-caption"></span>`;
+      this.loupe.dataset.skinStep = '1';
+      this.loupe.setAttribute('aria-hidden', 'true');
+      this.loupe.innerHTML = scene();
       this.pin = document.createElement('div'); this.pin.className = 'skin-pin'; this.pin.hidden = true; this.pin.setAttribute('aria-hidden', 'true');
       stage.append(this.pin, this.loupe);
       panel.querySelector('#mechanism-play').addEventListener('click', () => this.playing ? this.pause() : this.play());
@@ -76,9 +82,12 @@
     }
     render(product, step) {
       const changed = this.product?.id !== product.id;
-      if (changed) { this.pause(); this.clearAnchor(); }
+      if (changed) { this.pause(); this.clearAnchor(); this.lastPoint = null; }
       this.product = product; this.step = step; this.theme = profile(product);
-      for (const element of [this.panel, this.stage]) { element.dataset.skinTheme = this.theme.key; element.dataset.skinStep = String(step); element.style.setProperty('--skin-accent', this.theme.color); }
+      this.panel.dataset.skinTheme = this.theme.key;
+      this.panel.dataset.skinStep = String(step);
+      this.panel.style.setProperty('--skin-accent', this.theme.color);
+      this.loupe.dataset.skinTheme = this.theme.key;
       this.panel.querySelector('#mechanism-title').textContent = this.theme.title;
       this.panel.querySelector('#mechanism-counter').textContent = `0${step + 1} / 03`;
       this.panel.querySelector('.mechanism-legend').textContent = step === 0 ? '接触表面，不表示吸收深度' : step === 1 ? this.theme.legend : '长期记录，不由动画估算功效';
@@ -94,12 +103,10 @@
       const source = this.panel.querySelector('#mechanism-source'); source.href = product.source;
       source.textContent = this.theme.pending ? '查看原资料页（内容待复核） ↗' : `查看${product.sourceType} ↗`;
       this.panel.querySelector('#mechanism-review').textContent = '机制资料核对：2026-11-07 · 品牌资料，非独立验证';
-      this.loupe.querySelector('.loupe-heading').textContent = `${this.theme.title} · 示意`;
-      this.loupe.querySelector('.loupe-caption').textContent = ['接触皮肤表面', this.theme.focus, '变化需长期记录'][step];
       this.syncPlayback();
     }
     syncPlayback() {
-      for (const el of [this.panel, this.stage]) el.classList.toggle('skin-playing', this.playing && !this.reduced?.matches);
+      this.panel.classList.toggle('skin-playing', this.playing && !this.reduced?.matches);
       this.panel.querySelector('#mechanism-play').textContent = this.playing ? '暂停讲解' : this.reduced?.matches ? '逐段查看' : this.step === 2 ? '从头播放' : '播放讲解';
       this.panel.querySelector('#mechanism-play').setAttribute('aria-pressed', String(this.playing));
       this.panel.querySelector('#mechanism-next').textContent = this.step === 2 ? '回到开头 ↺' : '下一段 →';
@@ -119,40 +126,74 @@
     }
     pause() { clearTimeout(this.timer); this.timer = null; this.playing = false; if (this.product) this.syncPlayback(); }
     trigger(point) {
-      if (this.autoShown.has(this.product.id)) {
-        if (point?.camera) this.track(point);
-        else { this.loupe.hidden = false; this.pin.hidden = false; this.anchor = null; this.place(point || { x: this.stage.clientWidth * .29, y: this.stage.clientHeight * .58 }); }
-        return false;
-      }
+      if (this.autoShown.has(this.product.id)) return false;
       this.autoShown.add(this.product.id);
       this.pause(); this.onStep(1);
-      this.loupe.hidden = false; this.pin.hidden = false;
-      this.anchor = point?.anchor || null;
-      this.place(point || { x: this.stage.clientWidth * .29, y: this.stage.clientHeight * .58 });
+      this.showPreview(point);
       if (!this.reduced?.matches) { this.playing = true; this.syncPlayback(); this.schedule(); }
       return true;
     }
+    showPreview(point = this.lastPoint) {
+      if (!this.product) return;
+      clearTimeout(this.previewTimer);
+      this.previewState = 'playing';
+      this.anchor = point?.anchor ?? null;
+      this.lastPoint = point ?? null;
+      this.loupe.classList.remove('is-fading');
+      this.pin.classList.remove('is-fading');
+      this.loupe.classList.toggle('skin-playing', !this.reduced?.matches);
+      this.loupe.hidden = false;
+      this.pin.hidden = false;
+      if (this.anchor && this.frame) this.follow(this.frame);
+      else this.place(point || { x: this.stage.clientWidth * .29, y: this.stage.clientHeight * .58 });
+      this.onPreview(true);
+      const fadeTime = this.reduced?.matches ? 0 : FADE_MS;
+      this.previewTimer = setTimeout(() => {
+        if (!fadeTime) { this.hidePreview(); return; }
+        this.previewState = 'fading';
+        this.loupe.classList.add('is-fading');
+        this.pin.classList.add('is-fading');
+        this.previewTimer = setTimeout(() => this.hidePreview(), fadeTime);
+      }, PREVIEW_MS);
+    }
+    hidePreview() {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+      const wasVisible = this.previewState !== 'hidden';
+      this.previewState = 'hidden';
+      this.anchor = null;
+      this.loupe.hidden = true;
+      this.pin.hidden = true;
+      this.loupe.classList.remove('skin-playing', 'is-fading');
+      this.pin.classList.remove('is-fading');
+      if (wasVisible) this.onPreview(false);
+    }
     track(point) {
-      if (!point?.anchor || !this.anchor || !this.frame) return;
-      this.anchor = point.anchor; this.loupe.hidden = false; this.pin.hidden = false; this.place(point);
+      if (this.previewState !== 'playing' || !point?.anchor || !this.anchor || !this.frame) return;
+      this.anchor = point.anchor;
+      this.lastPoint = point;
+      this.loupe.hidden = false; this.pin.hidden = false; this.place(point);
     }
     place(point) {
       const w = this.stage.clientWidth, h = this.stage.clientHeight;
       const x = Math.max(12, Math.min(w - 12, point.x)), y = Math.max(12, Math.min(h - 12, point.y));
       this.pin.style.left = `${x}px`; this.pin.style.top = `${y}px`;
-      const lw = Math.min(156, w - 24), lh = 130;
+      const lw = Math.max(0, Math.min(156, w - 24)), lh = lw * .6;
       this.loupe.style.width = `${lw}px`;
-      this.loupe.style.left = `${Math.max(12, Math.min(w - lw - 12, x < w / 2 ? x + 24 : x - lw - 24))}px`;
-      this.loupe.style.top = `${Math.max(12, Math.min(h - lh - 47, y - lh / 2))}px`;
+      const midpoint = this.frame ? this.frame.left + this.frame.width / 2 : w / 2;
+      const outward = x < midpoint ? x - lw - 10 : x + 10;
+      this.loupe.style.left = `${Math.max(12, Math.min(w - lw - 12, outward))}px`;
+      this.loupe.style.top = `${Math.max(8, Math.min(h - lh - 8, y - lh / 2))}px`;
     }
     follow(frame) {
       this.frame = frame;
       if (!this.anchor) return;
       if (!frame) { this.loupe.hidden = true; this.pin.hidden = true; return; }
+      if (this.previewState !== 'playing') return;
       this.loupe.hidden = false; this.pin.hidden = false;
       this.place({ x: frame.left + this.anchor.u * frame.width, y: frame.top + this.anchor.v * frame.height });
     }
-    clearAnchor() { this.anchor = null; this.frame = null; this.loupe.hidden = true; this.pin.hidden = true; }
+    clearAnchor() { this.frame = null; this.hidePreview(); }
     stop() { this.pause(); this.clearAnchor(); }
   }
   window.GUYU_SKIN = { profile, SkinExperience };
