@@ -1,5 +1,5 @@
 import { ApproachGate, FingertipTracker, faceBounds, faceZone, toStagePoint } from './ar-engine.mjs?v=finger1';
-import { loadARAsset, waitFor, abortError } from './ar-loader.mjs?v=20261120-ar3';
+import { loadARAsset, waitFor, abortError } from './ar-loader.mjs?v=20261120-ar4';
 
 let visionLibrary;
 
@@ -7,7 +7,7 @@ let visionLibrary;
 export async function startARMirror({ video, stage, canvas, signal, retry = '', onApproach, onStatus, onLoad = () => {}, onReady = () => {}, onTracking = () => {}, onFace = () => {}, onPointer = () => {}, onFallback = () => {} }) {
   const loading = new AbortController(), cancel = () => loading.abort();
   signal?.addEventListener('abort',cancel,{once:true}); if(signal?.aborted)loading.abort();
-  let faceTask, handTask, wasm, wasmURL = null, FaceLandmarker, HandLandmarker;
+  let faceTask, handTask, wasm, wasmURL = null, FaceDetector, HandLandmarker;
   const closed=new WeakSet();
   function closeTask(task){if(task&&!closed.has(task)){closed.add(task);task.close();}}
   async function createTask(factory,label){
@@ -24,7 +24,7 @@ export async function startARMirror({ video, stage, canvas, signal, retry = '', 
       const suffix = retry ? '?retry=' + encodeURIComponent(retry) : '';
       const library = visionLibrary ?? await waitFor(import('./vendor/vision_bundle.mjs' + suffix), loading.signal, 15000, '识别组件加载超时，请重试');
       visionLibrary = library;
-      ({ FaceLandmarker, HandLandmarker } = library);
+      ({ FaceDetector, HandLandmarker } = library);
       const fileset = await waitFor(library.FilesetResolver.forVisionTasks(new URL('./vendor/wasm', import.meta.url).href), loading.signal, 6000);
       if (!fileset.wasmBinaryPath) return { fileset };
       const filename = new URL(fileset.wasmBinaryPath).pathname.split('/').pop();
@@ -71,12 +71,11 @@ export async function startARMirror({ video, stage, canvas, signal, retry = '', 
     faceLoading = true;
     faceFailed = false;
     try{
-      const model=await loadARAsset('models/face_landmarker.task','面部定位',{signal:loading.signal,onLoad});
-      const task=await createTask(()=>FaceLandmarker.createFromOptions(wasm,{
-        baseOptions:{modelAssetBuffer:model,delegate:'CPU'},runningMode:'VIDEO',numFaces:1,
-        minFaceDetectionConfidence:.5,minFacePresenceConfidence:.5,minTrackingConfidence:.5,
-        outputFaceBlendshapes:false,outputFacialTransformationMatrixes:false
-      }),'面部定位');
+      const model = await loadARAsset('models/face_detector.tflite', '面部定位', { signal: loading.signal, onLoad });
+      const task = await createTask(() => FaceDetector.createFromOptions(wasm, {
+        baseOptions: { modelAssetBuffer: model, delegate: 'CPU' },
+        runningMode: 'VIDEO', minDetectionConfidence: .6
+      }), '面部定位');
       if(stopped){closeTask(task);return;}faceTask=task;onReady('face');onLoad({phase:'ready',label:'面部定位'});
     } catch (_) {
       if (!stopped) reportFaceFailure();
@@ -101,13 +100,12 @@ export async function startARMirror({ video, stage, canvas, signal, retry = '', 
   function draw(now) {
     resizeCanvas(); ctx.clearRect(0, 0, stage.clientWidth, stage.clientHeight);
     if (frame && now - lastFaceAt > 240) { frame = null; zone = null; gate.update(null, now); onFace(null); }
-    if (lastFace && now - lastFaceAt <= 240) {
+    if (frame && now - lastFaceAt <= 240) {
       ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(235,255,240,.33)';
-      for (const edge of FaceLandmarker.FACE_LANDMARKS_FACE_OVAL) {
-        const a = lastFace[edge.start], b = lastFace[edge.end]; if (!a || !b) continue;
-        const p1 = position(a), p2 = position(b);
-        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.ellipse(frame.left + frame.width / 2, frame.top + frame.height / 2,
+        frame.width / 2, frame.height / 2, 0, 0, Math.PI * 2);
+      ctx.stroke();
     }
     const tip = tracker.sample(now);
     if (tip && tip.x >= 0 && tip.x <= stage.clientWidth && tip.y >= 0 && tip.y <= stage.clientHeight) {
@@ -142,8 +140,20 @@ export async function startARMirror({ video, stage, canvas, signal, retry = '', 
     if (faceTask && now - lastFaceInference >= 110) {
       lastFaceInference = now;
       try {
-        const found = faceTask.detectForVideo(video, now).faceLandmarks[0];
-        if (found) { lastFace = found; lastFaceAt = now; }
+        const found = faceTask.detectForVideo(video, now).detections[0];
+        const bounds = found?.boundingBox;
+        if (bounds) {
+          // BlazeFace returns a measured face box and normalized eye points.
+          lastFace = {
+            corners: [
+              { x: bounds.originX / video.videoWidth, y: bounds.originY / video.videoHeight },
+              { x: (bounds.originX + bounds.width) / video.videoWidth,
+                y: (bounds.originY + bounds.height) / video.videoHeight }
+            ],
+            eyes: found.keypoints?.slice(0, 2) ?? []
+          };
+          lastFaceAt = now;
+        }
       } catch (_) {
         closeTask(faceTask);
         faceTask = null;
@@ -152,14 +162,17 @@ export async function startARMirror({ video, stage, canvas, signal, retry = '', 
       }
     }
     if (now - lastFaceAt > 240) lastFace = null;
-    const box = lastFace && faceBounds(lastFace);
+    const box = lastFace && faceBounds(lastFace.corners);
     const tracked=`${!!lastHand?.[8]}:${!!box}`;
     if(tracking!==tracked){tracking=tracked;onTracking({hand:!!lastHand?.[8],face:!!box});}
     if (!box) { frame = null; zone = null; gate.update(null, now); onFace(null); say(lastHand ? faceTask ? '光点已跟上指尖，让面部轮廓也进入画面' : faceFailed ? '手指光点可用，面部定位需重试；也可点选区域' : '手指光点已就绪，面部定位仍在准备' : '先让手掌和食指完整入镜，再慢慢靠近脸颊'); return; }
     const upper = position({ x: box.right, y: box.top }), lower = position({ x: box.left, y: box.bottom });
     frame = { left: upper.x, top: upper.y, width: lower.x - upper.x, height: lower.y - upper.y }; onFace(frame);
     if (!lastHand?.[8]) { zone = null; gate.update(null, now); say('面部已就绪，抬起食指，让指尖进入画面'); return; }
-    zone = faceZone(lastFace, lastHand[8], .035);
+    const fingertip = lastHand[8];
+    const nearEye = lastFace.eyes.some(eye =>
+      Math.hypot((fingertip.x - eye.x) / box.width, (fingertip.y - eye.y) / box.height) < .15);
+    zone = nearEye ? null : faceZone(lastFace.corners, fingertip, .035);
     if (!zone) { gate.update(null, now); say('光点跟随食指，靠近脸颊或额头试试'); return; }
     const tip = position(lastHand[8]), relative = { x: (tip.x - frame.left) / frame.width, y: (tip.y - frame.top) / frame.height };
     const shown = gate.update(zone, now, relative);

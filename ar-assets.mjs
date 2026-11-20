@@ -24,5 +24,10 @@ export const AR_ASSETS = {
     "rawBytes": 13519940,
     "packedBytes": 3947792,
     "sha256": "3b57e4b55ac6346bf940212e3e11250b308a6a474077385e2f527b119cf74525"
+  },
+  "models/face_detector.tflite": {
+    "rawBytes": 229746,
+    "packedBytes": 198779,
+    "sha256": "b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f"
   }
 };

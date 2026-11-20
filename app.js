@@ -464,9 +464,9 @@
     arLoadController?.abort();
     const controller = new AbortController(); arLoadController = controller;
     $('ar-loading').hidden = false; $('ar-retry').hidden = true; $('ar-load-progress').hidden = false; $('ar-load-progress').removeAttribute('value');
+    $('ar-retry').textContent = '重试识别';
     $('ar-load-label').textContent = '准备手指识别'; $('camera-mode').textContent = '加载手指识别';
-    let importTimer, abortImport, startupTimer;
-    let startupExpired = false;
+    let importTimer, abortImport, downloadStarted;
     const downloads = new Map();
     const setLoadLabel = (text) => {
       const label = $('ar-load-label');
@@ -475,7 +475,7 @@
     try {
       const suffix = retry ? '&retry=' + encodeURIComponent(retry) : '';
       arModule ??= await Promise.race([
-        import('./ar-mirror.mjs?v=20261120-ar3' + suffix),
+        import('./ar-mirror.mjs?v=20261120-ar4' + suffix),
         new Promise((_,reject) => {
           importTimer = setTimeout(() => reject(new Error('识别组件加载超时，请重试')),18000);
           abortImport = () => reject(new DOMException('已停止','AbortError'));
@@ -484,10 +484,6 @@
       ]);
       clearTimeout(importTimer); controller.signal.removeEventListener('abort',abortImport);
       if (run !== cameraRun || controller.signal.aborted) return;
-      startupTimer = setTimeout(() => {
-        startupExpired = true;
-        controller.abort();
-      }, 50000);
       const session = await arModule.startARMirror({ video:$('camera-video'), stage, canvas:overlay, signal:controller.signal, retry,
         onLoad: (info) => {
           if (run !== cameraRun) return;
@@ -497,17 +493,20 @@
           if (info.phase === 'failed') {
             downloads.clear();
             setLoadLabel('手指光点可用，面部定位需重试');
+            $('ar-retry').textContent = '重试面部定位';
             progress.hidden = true; $('ar-retry').hidden = false; return;
           }
           progress.hidden = false;
           if (info.phase === 'download') {
+            downloadStarted ??= Date.now();
             const mb = n => (n / 1048576).toFixed(1);
             downloads.set(info.label, { loaded: info.loaded, total: info.total });
             const parts = Array.from(downloads.values());
             const loaded = parts.reduce((sum, part) => sum + part.loaded, 0);
             const total = parts.reduce((sum, part) => sum + part.total, 0);
             const label = parts.length > 1 ? '手指识别资源' : info.label;
-            setLoadLabel(`下载${label} ${mb(loaded)} / ${mb(Math.max(loaded, total))} MB`);
+            const slow = Date.now() - downloadStarted >= 25000 ? ' · 慢速下载中' : '';
+            setLoadLabel(`下载${label} ${mb(loaded)} / ${mb(Math.max(loaded, total))} MB${slow}`);
             progress.max = Math.max(1, loaded, total); progress.value = loaded;
           } else if (info.phase === 'unpack' && Array.from(downloads.values()).some(part => part.loaded < part.total)) {
             return;
@@ -519,8 +518,8 @@
         },
         onReady: (kind) => {
           if (run !== cameraRun || kind !== 'hand') return;
-          clearTimeout(startupTimer);
           downloads.clear();
+          downloadStarted = undefined;
           $('ar-loading').hidden = true;
           stage.classList.add('ar-ready');
           $('camera-mode').textContent = '寻找食指';
@@ -529,21 +528,21 @@
         onApproach: (zone,point) => { if (run === cameraRun) triggerMechanism(zone,point); },
         onFace: (bounds) => { if (run === cameraRun) skin.follow(bounds); },
         onPointer: (point) => { if (run === cameraRun && point) skin.track(point); },
-        onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); skin.clearAnchor(); $('camera-mode').textContent = '手指识别已暂停'; $('ar-loading').hidden = false; $('ar-load-label').textContent = '识别已暂停，可以重试'; $('ar-load-progress').hidden = true; $('ar-retry').hidden = false; } },
+        onFallback: () => { if (run === cameraRun) { stage.classList.remove('ar-ready'); skin.clearAnchor(); $('camera-mode').textContent = '手指识别已暂停'; $('ar-loading').hidden = false; $('ar-load-label').textContent = '识别已暂停，可以重试'; $('ar-load-progress').hidden = true; $('ar-retry').textContent = '重试识别'; $('ar-retry').hidden = false; } },
         onStatus: (message) => { if (run === cameraRun) $('camera-message').textContent = message; }
       });
       if (run !== cameraRun || controller.signal.aborted) { session.stop(); return; }
       arSession = session;
     } catch (error) {
-      if (run !== cameraRun || (controller.signal.aborted && !startupExpired)) return;
+      if (run !== cameraRun || controller.signal.aborted) return;
       controller.abort();
       $('camera-mode').textContent = '手指识别未启动';
-      const message = startupExpired ? '手指识别启动超时，请重试' : /超时|无响应|缺失|下载失败|不完整|校验失败|不支持模型解压/.test(error.message) ? error.message : '识别组件没有加载完成，请重试';
+      const message = /超时|暂时中断|缺失|下载失败|不完整|校验失败|不支持模型解压/.test(error.message) ? error.message : '识别组件没有加载完成，请重试';
+      $('ar-retry').textContent = /暂时中断|下载失败|不完整/.test(message) ? '继续下载' : '重试识别';
       $('ar-load-label').textContent = message; $('ar-load-progress').hidden = true; $('ar-retry').hidden = false; $('ar-loading').hidden = false;
       $('camera-message').textContent = '相机已开启，手指识别尚未就绪；点选体验仍可使用';
     } finally {
       clearTimeout(importTimer);
-      clearTimeout(startupTimer);
       if (abortImport) controller.signal.removeEventListener('abort', abortImport);
     }
   }

@@ -1,7 +1,8 @@
-import { AR_ASSETS } from './ar-assets.mjs?v=load2';
+import { AR_ASSETS } from './ar-assets.mjs?v=20261120-ar4';
 
 const CACHE_NAME = 'guyu-ar-assets-load2';
-const DOWNLOAD_TIMEOUT = '下载长时间无响应，请重试';
+const DOWNLOAD_TIMEOUT = '下载暂时中断，可以继续';
+const partialAssets = new Map();
 
 export function abortError() { return new DOMException('已停止加载', 'AbortError'); }
 
@@ -20,7 +21,7 @@ export function waitFor(promise, signal, timeoutMs = 20000, message = '识别启
   });
 }
 
-async function readResponse(response, { signal, report, limit, total, idleMs }) {
+async function readResponse(response, { signal, report, limit, total, idleMs, partial }) {
   if (!response.body?.getReader) {
     const bytes = new Uint8Array(await waitFor(response.arrayBuffer(), signal, idleMs, DOWNLOAD_TIMEOUT));
     if (bytes.length > limit) throw new Error('识别文件大小异常');
@@ -30,7 +31,7 @@ async function readResponse(response, { signal, report, limit, total, idleMs }) 
 
   const reader = response.body.getReader();
   const chunks = [];
-  let length = 0;
+  let length = partial?.length ?? 0;
   try {
     while (true) {
       if (signal.aborted) throw abortError();
@@ -38,7 +39,12 @@ async function readResponse(response, { signal, report, limit, total, idleMs }) 
       if (done) break;
       length += value.byteLength;
       if (length > limit) throw new Error('识别文件大小异常');
-      chunks.push(value);
+      if (partial) {
+        partial.bytes.set(value, partial.length);
+        partial.length = length;
+      } else {
+        chunks.push(value);
+      }
       report(length, total);
     }
   } catch (error) {
@@ -48,6 +54,7 @@ async function readResponse(response, { signal, report, limit, total, idleMs }) 
     reader.releaseLock();
   }
 
+  if (partial) return partial.bytes.subarray(0, length);
   const bytes = new Uint8Array(length);
   let offset = 0;
   for (const chunk of chunks) {
@@ -83,9 +90,9 @@ async function decodeAsset(bytes, meta, signal) {
   return raw;
 }
 
-/** Verified downloads and retries share one time budget per asset. */
+/** Slow transfers continue as long as data is arriving. Retries can resume in this page. */
 export async function loadARAsset(relative, label, {
-  signal, onLoad = () => {}, timeoutMs = 42000, idleMs = 12000
+  signal, onLoad = () => {}, idleMs = 24000
 } = {}) {
   if (signal?.aborted) throw abortError();
   const meta = AR_ASSETS[relative];
@@ -94,9 +101,8 @@ export async function loadARAsset(relative, label, {
   const controller = new AbortController();
   const local = controller.signal;
   const stop = () => controller.abort();
-  const timer = setTimeout(stop, timeoutMs);
   signal?.addEventListener('abort', stop, { once: true });
-  const rawURL = new URL(relative, import.meta.url);
+  const rawURL = new URL(relative, import.meta.url).href;
   const key = new URL(relative + '.gz?v=load2', import.meta.url).href;
   const report = (loaded, total) => onLoad({ phase: 'download', label, loaded, total });
 
@@ -119,29 +125,75 @@ export async function loadARAsset(relative, label, {
     const cancelRequest = () => request.abort();
     local.addEventListener('abort', cancelRequest, { once: true });
     if (local.aborted) cancelRequest();
-    const fetchAsset = url => waitFor(fetch(url, {
-      signal: request.signal, cache: retry ? 'reload' : 'default', credentials: 'same-origin'
+    const fetchAsset = (url, offset) => waitFor(fetch(url, {
+      signal: request.signal, cache: retry || offset ? 'reload' : 'default', credentials: 'same-origin',
+      headers: offset ? { Range: 'bytes=' + offset + '-' } : undefined
     }), local, idleMs, DOWNLOAD_TIMEOUT);
 
     try {
-      report(0, meta.packedBytes);
-      let response = await fetchAsset(key);
-      let expectedBytes = meta.packedBytes;
-      if (response.status === 404 || (response.ok && /text\/html/i.test(response.headers.get('Content-Type') || ''))) {
+      let partial = partialAssets.get(key);
+      let url = partial?.url ?? key;
+      let expectedBytes = partial?.bytes.length ?? meta.packedBytes;
+      let offset = partial?.length ?? 0;
+      report(offset, expectedBytes);
+      let response = await fetchAsset(url, offset);
+      if (url === key && (response.status === 404 || (response.ok && /text\/html/i.test(response.headers.get('Content-Type') || '')))) {
         void response.body?.cancel().catch(() => {});
+        partialAssets.delete(key);
+        partial = undefined;
+        offset = 0;
+        url = rawURL;
         report(0, meta.rawBytes);
-        response = await fetchAsset(rawURL);
         expectedBytes = meta.rawBytes;
+        response = await fetchAsset(url, 0);
       }
       if (response.status === 404) throw new Error('识别文件缺失，请更新模型资源');
       if (!response.ok) {
         void response.body?.cancel().catch(() => {});
-        if (response.status === 408 || response.status === 429 || response.status >= 500) {
+        if (response.status === 416 && offset) partialAssets.delete(key);
+        if (response.status === 408 || response.status === 416 || response.status === 429 || response.status >= 500) {
           throw new TypeError('识别文件下载失败，请重试');
         }
         throw new Error('识别文件下载失败，请重试');
       }
-      return await readAsset(response, expectedBytes, report);
+
+      if (response.status === 206) {
+        const expectedRange = 'bytes ' + offset + '-' + (expectedBytes - 1) + '/' + expectedBytes;
+        if (!offset || response.headers.get('Content-Range') !== expectedRange) {
+          void response.body?.cancel().catch(() => {});
+          partialAssets.delete(key);
+          throw new TypeError('识别文件续传位置不匹配');
+        }
+      } else {
+        partialAssets.delete(key);
+        partial = undefined;
+        report(0, expectedBytes);
+      }
+      const encoding = response.headers.get('Content-Encoding');
+      const length = Number(response.headers.get('Content-Length'));
+      if (response.status === 206 && encoding && encoding !== 'identity') {
+        void response.body?.cancel().catch(() => {});
+        partialAssets.delete(key);
+        throw new TypeError('识别文件续传编码不匹配');
+      }
+      const canCheckpoint = response.body?.getReader && (!encoding || encoding === 'identity') &&
+        (response.status === 206 || !length || length === expectedBytes) &&
+        !/text\/html/i.test(response.headers.get('Content-Type') || '');
+      if (!canCheckpoint) return await readAsset(response, expectedBytes, report);
+
+      partial ??= { url, bytes: new Uint8Array(expectedBytes), length: 0 };
+      partialAssets.set(key, partial);
+      const packed = await readResponse(response, {
+        signal: local, report, limit: expectedBytes, total: expectedBytes, idleMs, partial
+      });
+      if (packed.length !== expectedBytes) throw new Error('识别文件不完整，请继续下载');
+      partialAssets.delete(key);
+      onLoad({ phase: 'unpack', label, loaded: packed.length, total: packed.length });
+      return { packed, raw: await decodeAsset(packed, meta, local) };
+    } catch (error) {
+      const received = partialAssets.get(key);
+      if (received && received.length === received.bytes.length) partialAssets.delete(key);
+      throw error;
     } finally {
       local.removeEventListener('abort', cancelRequest);
       cancelRequest();
@@ -153,7 +205,9 @@ export async function loadARAsset(relative, label, {
     const cached = await waitFor(cache?.match(key), local, 900).catch(() => null);
     if (cached) {
       try {
-        return (await readAsset(cached, meta.packedBytes, () => {})).raw;
+        const result = await readAsset(cached, meta.packedBytes, () => {});
+        partialAssets.delete(key);
+        return result.raw;
       } catch (error) {
         if (local.aborted) throw error;
         await waitFor(cache.delete(key), local, 900).catch(() => {});
@@ -164,7 +218,7 @@ export async function loadARAsset(relative, label, {
     try {
       result = await download(false);
     } catch (error) {
-      const recoverable = error instanceof TypeError || /无响应|不完整|校验失败/.test(error.message);
+      const recoverable = error instanceof TypeError || /暂时中断|不完整|校验失败/.test(error.message);
       if (local.aborted || !recoverable) throw error;
       onLoad({ phase: 'retry', label });
       result = await download(true);
@@ -180,11 +234,9 @@ export async function loadARAsset(relative, label, {
     return result.raw;
   } catch (error) {
     if (signal?.aborted) throw abortError();
-    if (local.aborted) throw new Error('下载' + label + '超时，请重试');
-    if (error instanceof TypeError) throw new Error(label + '下载失败，请重试');
+    if (error instanceof TypeError) throw new Error(label + '下载失败，可以继续');
     throw error;
   } finally {
-    clearTimeout(timer);
     signal?.removeEventListener('abort', stop);
   }
 }
