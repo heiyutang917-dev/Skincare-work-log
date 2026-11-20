@@ -45,6 +45,35 @@
       <g class="skin-eye" fill="none" stroke="currentColor" stroke-width="2"><path d="M110 54q90-48 180 0M110 58q90 42 180 0"/><path d="M130 79q70 27 140 0" stroke-dasharray="4 5"/></g>
     </svg>`;
   }
+  function cameraScene() {
+    return `<svg class="skin-svg" viewBox="0 0 200 90" aria-hidden="true" fill="none">
+      <g class="skin-camera-surface">
+        <path d="M8 47q30-8 62 0t62 0 60 0"/>
+        <path d="M16 64q28-7 57 0t57 0 54 0"/>
+      </g>
+      <path class="skin-film" d="M27 35q30-8 67 0t79 0"/>
+      <g class="skin-bright">
+        <path d="M60 53V25m40 28V19m40 34V25" stroke-dasharray="3 4"/>
+        <circle cx="60" cy="25" r="5"/><circle cx="100" cy="19" r="6"/><circle cx="140" cy="25" r="5"/>
+      </g>
+      <path class="skin-barrier" d="M35 51v12m25-13v10m25-10v12m25-11v12m25-12v11m25-12v10"/>
+      <g class="skin-drops">
+        <circle class="skin-particle" style="--delay:0s" cx="60" cy="30" r="4"/>
+        <circle class="skin-particle" style="--delay:.3s" cx="100" cy="25" r="5"/>
+        <circle class="skin-particle" style="--delay:.6s" cx="140" cy="30" r="4"/>
+      </g>
+      <g class="skin-network">
+        <path d="m27 76 29-17 30 17 30-17 30 17 27-16"/>
+        <path class="skin-signal" d="m27 76 29-17 30 17 30-17 30 17 27-16"/>
+      </g>
+      <g class="skin-messages">
+        <path d="m47 35 52-14 54 14" stroke-dasharray="3 4"/>
+        <circle cx="47" cy="35" r="5"/><circle cx="99" cy="21" r="6"/><circle cx="153" cy="35" r="5"/>
+      </g>
+      <path class="skin-eye" d="M37 34q62-32 126 0m-106 2q42-17 86 0"/>
+    </svg>`;
+  }
+
   const PREVIEW_MS = 4800;
   const FADE_MS = 320;
 
@@ -52,7 +81,7 @@
     constructor({ panel, stage, onStep, onPreview = () => {} }) {
       this.panel = panel; this.stage = stage; this.onStep = onStep; this.onPreview = onPreview;
       this.product = null; this.step = 0; this.playing = false; this.timer = null; this.frame = null; this.anchor = null;
-      this.previewTimer = null; this.previewState = 'hidden'; this.lastPoint = null;
+      this.previewTimer = null; this.previewState = 'hidden';
       this.autoShown = new Set();
       this.reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)');
       panel.innerHTML = `<div class="mechanism-heading"><div><div class="panel-eyebrow">配方原理 · 分步了解</div><h2 id="mechanism-title"></h2></div><span class="mechanism-counter" id="mechanism-counter">01 / 03</span></div>
@@ -65,7 +94,7 @@
       this.loupe = document.createElement('div'); this.loupe.className = 'skin-loupe'; this.loupe.hidden = true;
       this.loupe.dataset.skinStep = '1';
       this.loupe.setAttribute('aria-hidden', 'true');
-      this.loupe.innerHTML = scene();
+      this.loupe.innerHTML = cameraScene();
       this.pin = document.createElement('div'); this.pin.className = 'skin-pin'; this.pin.hidden = true; this.pin.setAttribute('aria-hidden', 'true');
       stage.append(this.pin, this.loupe);
       panel.querySelector('#mechanism-play').addEventListener('click', () => this.playing ? this.pause() : this.play());
@@ -82,7 +111,7 @@
     }
     render(product, step) {
       const changed = this.product?.id !== product.id;
-      if (changed) { this.pause(); this.clearAnchor(); this.lastPoint = null; }
+      if (changed) { this.pause(); this.clearAnchor(); }
       this.product = product; this.step = step; this.theme = profile(product);
       this.panel.dataset.skinTheme = this.theme.key;
       this.panel.dataset.skinStep = String(step);
@@ -133,12 +162,11 @@
       if (!this.reduced?.matches) { this.playing = true; this.syncPlayback(); this.schedule(); }
       return true;
     }
-    showPreview(point = this.lastPoint) {
+    showPreview(point) {
       if (!this.product) return;
       clearTimeout(this.previewTimer);
       this.previewState = 'playing';
       this.anchor = point?.anchor ?? null;
-      this.lastPoint = point ?? null;
       this.loupe.classList.remove('is-fading');
       this.pin.classList.remove('is-fading');
       this.loupe.classList.toggle('skin-playing', !this.reduced?.matches);
@@ -171,14 +199,13 @@
     track(point) {
       if (this.previewState !== 'playing' || !point?.anchor || !this.anchor || !this.frame) return;
       this.anchor = point.anchor;
-      this.lastPoint = point;
       this.loupe.hidden = false; this.pin.hidden = false; this.place(point);
     }
     place(point) {
       const w = this.stage.clientWidth, h = this.stage.clientHeight;
       const x = Math.max(12, Math.min(w - 12, point.x)), y = Math.max(12, Math.min(h - 12, point.y));
       this.pin.style.left = `${x}px`; this.pin.style.top = `${y}px`;
-      const lw = Math.max(0, Math.min(156, w - 24)), lh = lw * .6;
+      const lw = Math.max(0, Math.min(140, w - 24)), lh = lw * .45;
       this.loupe.style.width = `${lw}px`;
       const midpoint = this.frame ? this.frame.left + this.frame.width / 2 : w / 2;
       const outward = x < midpoint ? x - lw - 10 : x + 10;
@@ -187,10 +214,8 @@
     }
     follow(frame) {
       this.frame = frame;
-      if (!this.anchor) return;
-      if (!frame) { this.loupe.hidden = true; this.pin.hidden = true; return; }
-      if (this.previewState !== 'playing') return;
-      this.loupe.hidden = false; this.pin.hidden = false;
+      // Keep the single preview in place through a brief face-tracking interruption.
+      if (!this.anchor || !frame || this.previewState !== 'playing') return;
       this.place({ x: frame.left + this.anchor.u * frame.width, y: frame.top + this.anchor.v * frame.height });
     }
     clearAnchor() { this.frame = null; this.hidePreview(); }

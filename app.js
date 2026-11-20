@@ -45,9 +45,8 @@
     }
   });
   stage.parentElement.querySelector('.camera-top > span').innerHTML = '<span class="camera-indicator"></span> <span id="camera-mode">点选体验</span>';
-  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-replay">重播动画</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 开启摄像头，让面部与食指进入画面<br>② 抬起食指，看到光点跟随指尖<br>③ 靠近脸颊或额头，光圈从当前位置展开<br>每款产品只自动演示一次，动画播完会淡出，也可以手动重播<br>手机判断画面位置接近，无法确认真实触碰</div></div>');
+  stage.parentElement.querySelector('.camera-foot').insertAdjacentHTML('beforebegin', '<div class="camera-guide"><span id="camera-guidance">先点一个区域，看看作用示意</span><div class="camera-zones" role="group" aria-label="不用相机也可体验"><button type="button" data-zone="cheek">脸颊</button><button type="button" data-zone="forehead">额头</button><button type="button" id="camera-help" aria-expanded="false">手势指引</button></div><div id="camera-help-copy" hidden>① 开启摄像头，让面部与食指进入画面<br>② 抬起食指，看到光点跟随指尖<br>③ 靠近脸颊或额头，光圈从当前位置展开<br>每款产品演示一次，动画播完自动淡出<br>手机判断画面位置接近，无法确认真实触碰</div></div>');
   $('camera-guidance').after(arEvent);
-  $('camera-replay').addEventListener('click', () => skin.showPreview());
   $('camera-help').addEventListener('click', () => {
     const expanded = $('camera-help').getAttribute('aria-expanded') !== 'true';
     $('camera-help').setAttribute('aria-expanded', String(expanded)); $('camera-help-copy').hidden = !expanded;
@@ -477,7 +476,7 @@
     try {
       const suffix = retry ? '&retry=' + encodeURIComponent(retry) : '';
       arModule ??= await Promise.race([
-        import('./ar-mirror.mjs?v=20261120-ar4' + suffix),
+        import('./ar-mirror.mjs?v=20261120-ar6' + suffix),
         new Promise((_,reject) => {
           importTimer = setTimeout(() => reject(new Error('识别组件加载超时，请重试')),18000);
           abortImport = () => reject(new DOMException('已停止','AbortError'));
